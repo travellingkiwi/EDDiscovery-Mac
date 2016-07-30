@@ -1,0 +1,354 @@
+//
+//  3DMapViewController.m
+//  EDDiscovery
+//
+//  Created by thorin on 08/06/16.
+//  Copyright © 2016 Michele Noberasco. All rights reserved.
+//  Converted to 3D by Hamish Marson <hamish@travellingkiwi.com> 10/07/2016
+//
+
+//#import <MapKit/MapKit.h>
+
+#import "ThreeDMapViewController.h"
+#import "Jump.h"
+#import "Commander.h"
+#import "System.h"
+#import "CartographicOverlayRenderer.h"
+#import "CartographicOverlay.h"
+#import "MapAnnotation.h"
+#import "BlackTileOverlay.h"
+
+//boundaries of galaxy, in ED coordinate system
+
+#define MINX -45000
+#define MAXX  45000
+#define MINY -20000
+#define MAXY  70000
+
+
+/*
+ Copyright (C) 2015 Apple Inc. All Rights Reserved.
+ See LICENSE.txt for this sample’s licensing information
+ 
+ Abstract:
+ View Controller for Metal Sample Code. Maintains a CADisplayLink timer that runs on the main thread and triggers rendering in AAPLView. Provides update callbacks to its delegate on the timer, prior to triggering rendering.
+ */
+#import "ThreeDMapViewController.h"
+#import "ThreeDMapView.h"
+#import "ThreeDMapRenderer.h"
+
+#import <QuartzCore/CAMetalLayer.h>
+
+@implementation ThreeDMapViewController {
+@private
+  // app control
+  CVDisplayLinkRef _displayLink;
+  dispatch_source_t _displaySource;
+  
+  // boolean to determine if the first draw has occured
+  BOOL _firstDrawOccurred;
+  
+  CFTimeInterval _timeSinceLastDrawPreviousTime;
+  
+  // pause/resume
+  BOOL _gameLoopPaused;
+  
+  // our renderer instance
+  ThreeDMapRenderer *_renderer;
+  
+  MKPolyline     *polyline;
+  NSMutableArray *waypoints;
+
+  galaxy_t galaxy;
+}
+
+- (void)dealloc {
+  if(_displayLink) {
+    [self stopGameLoop];
+  }
+}
+
+// This is the renderer output callback function
+static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
+                                 const CVTimeStamp* now,
+                                 const CVTimeStamp* outputTime,
+                                 CVOptionFlags flagsIn,
+                                 CVOptionFlags* flagsOut,
+                                 void* displayLinkContext) {
+  __weak dispatch_source_t source = (__bridge dispatch_source_t)displayLinkContext;
+  dispatch_source_merge_data(source, 1);
+  return kCVReturnSuccess;
+}
+
+- (void)initCommon {
+  _renderer = [ThreeDMapRenderer new];
+  self.delegate = _renderer;
+  
+  _displaySource = dispatch_source_create(DISPATCH_SOURCE_TYPE_DATA_ADD, 0, 0, dispatch_get_main_queue());
+  __block ThreeDMapViewController* weakSelf = self;
+  dispatch_source_set_event_handler(_displaySource, ^(){
+    [weakSelf gameloop];
+  });
+  dispatch_resume(_displaySource);
+  
+  CVReturn cvReturn;
+  // Create a display link capable of being used with all active displays
+  cvReturn = CVDisplayLinkCreateWithActiveCGDisplays(&_displayLink);
+  
+  assert(cvReturn == kCVReturnSuccess);
+  
+  cvReturn = CVDisplayLinkSetOutputCallback(_displayLink, &dispatchGameLoop, (__bridge void*)_displaySource);
+  
+  assert(cvReturn == kCVReturnSuccess);
+  
+  cvReturn = CVDisplayLinkSetCurrentCGDisplay(_displayLink, CGMainDisplayID () );
+  
+  assert(cvReturn == kCVReturnSuccess);
+  
+  _interval = 1;
+}
+
+- (void)_windowWillClose:(NSNotification*)notification {
+  // Stop the display link when the window is closing because we will
+  // not be able to get a drawable, but the display link may continue
+  // to fire
+  
+  if(notification.object == self.view.window) {
+    CVDisplayLinkStop(_displayLink);
+    dispatch_source_cancel(_displaySource);
+  }
+}
+
+- (id)init {
+  self = [super init];
+  
+  if(self) {
+    [self initCommon];
+  }
+  return self;
+}
+
+// Called when loaded from nib
+- (id)initWithNibName:(NSString *)nibNameOrNil
+               bundle:(NSBundle *)nibBundleOrNil {
+  self = [super initWithNibName:nibNameOrNil
+                         bundle:nibBundleOrNil];
+  
+  if(self) {
+    [self initCommon];
+  }
+  
+  return self;
+}
+
+// called when loaded from storyboard
+- (id)initWithCoder:(NSCoder *)coder {
+  self = [super initWithCoder:coder];
+  
+  if(self) {
+    [self initCommon];
+  }
+  
+  return self;
+}
+
+- (void)viewDidLoad {
+  [super viewDidLoad];
+  
+  ThreeDMapView *renderView = (ThreeDMapView *)self.view;
+  renderView.delegate = _renderer;
+  
+  // load all renderer assets before starting game loop
+  [_renderer configure:renderView galaxy:&galaxy];
+  
+  
+  NSNotificationCenter* notificationCenter = [NSNotificationCenter defaultCenter];
+  // Register to be notified when the window closes so we can stop the displaylink
+  [notificationCenter addObserver:self
+                         selector:@selector(_windowWillClose:)
+                             name:NSWindowWillCloseNotification
+                           object:self.view.window];
+  
+  
+  CVDisplayLinkStart(_displayLink);
+}
+
+- (void)viewDidAppear {
+  [super viewDidAppear];
+  
+  [Answers logCustomEventWithName:@"Screen view" customAttributes:@{@"screen":NSStringFromClass(self.class)}];
+  
+  [self loadGalaxy];
+  
+  [NSWorkspace.sharedWorkspace.notificationCenter addObserver:self selector:@selector(loadJumpsAndWaypoints) name:NEW_JUMP_NOTIFICATION object:nil];
+}
+
+- (void)viewDidDisappear {
+  [super viewDidDisappear];
+  
+  [NSWorkspace.sharedWorkspace.notificationCenter removeObserver:self name:NEW_JUMP_NOTIFICATION object:nil];
+}
+
+#pragma mark -
+#pragma mark ED coordinate system
+
+- (void)loadCoordinateSystem {
+  //determine boundaries of map view, in map view coordinate format
+
+  
+  
+  
+  
+}
+
+- (void)loadJumpsAndWaypoints {
+  NSArray         *jumps  = [Jump allJumpsOfCommander:Commander.activeCommander];
+  journey_block_t *journey=galaxy.first_journey_block;
+  
+  if(journey==NULL) {
+    NSLog(@"%s: journey is NULL - allocating %lu bytes for new one", __FUNCTION__, sizeof(journey_block_t));
+  
+    if((journey=calloc(sizeof(journey_block_t), 1))==NULL) {
+      NSLog(@"%s: Unable to calloc %lu Bytes for journey_block_t", __FUNCTION__, sizeof(journey_block_t));
+      exit(-1);
+    }
+    galaxy.first_journey_block=journey;
+    galaxy.last_journey_block=journey;
+    
+    galaxy.num_journey_blocks=1;
+  }
+  for (Jump *jump in jumps) {
+    if (jump.system.hasCoordinates) { // && !jump.hidden) {
+      JourneyVertex_t *point=&journey->systems[journey->numsystems];
+      
+      point->posx = jump.system.x/LY_2_MTL;
+      point->posy = jump.system.y/LY_2_MTL;
+      point->posz = jump.system.z/LY_2_MTL;
+      
+      // SHould be red?
+      point->colour[0]=0.0f;
+      point->colour[1]=1.0f;
+      point->colour[2]=0.0f;
+      point->colour[3]=1.0f;
+      
+      NSLog(@"%s: Jump Point %d (%8.4f %8.4f %8.4f)", __FUNCTION__, journey->numsystems, point->posx, point->posy, point->posz);
+  
+      if(journey->numsystems<JUMPS_PER_BLOCK) {
+        journey->numsystems++;
+      }
+    } else {
+      NSLog(@"%s: Jump Point - has no co-ordinates", __FUNCTION__);
+    }
+  }
+  NSLog(@"%s: Finished loading jumps", __FUNCTION__);
+
+  // Now load the systems in the galaxy... Hmm... Wonder how long 1000000 vertices take to load...
+  
+#ifdef DRAWGALAXY
+  // To then get all the systems...
+  
+  NSArray *galaxy=[System allSystemsInContext:Commander.managedObjectContext];
+  
+  
+#endif
+  [_renderer setVertexBuffer:&galaxy];
+}
+
+
+#pragma mark -
+#pragma mark map contents management
+
+- (void)loadGalaxy {
+  static dispatch_once_t onceToken;
+  
+  dispatch_once(&onceToken, ^{
+    
+    NSLog(@"%s: (%s)", __FUNCTION__, "Loading the galaxy");
+
+    //calculate ED coordinate system
+    
+    [self loadCoordinateSystem];
+    
+    // Preload the known galaxy into a structure that we can render...
+    
+  });
+  
+  //add polyline with CMDR jumps
+  
+  [self loadJumpsAndWaypoints];
+}
+
+
+// The main game loop called by the timer above
+- (void)gameloop {
+  
+  // tell our delegate to update itself here.
+  [_delegate update:self];
+  
+  if(!_firstDrawOccurred) {
+    // set up timing data for display since this is the first time through this loop
+    _timeSinceLastDraw             = 0.0;
+    _timeSinceLastDrawPreviousTime = CACurrentMediaTime();
+    _firstDrawOccurred              = YES;
+  } else {
+    // figure out the time since we last we drew
+    CFTimeInterval currentTime = CACurrentMediaTime();
+    
+    _timeSinceLastDraw = currentTime - _timeSinceLastDrawPreviousTime;
+    
+    // keep track of the time interval between draws
+    _timeSinceLastDrawPreviousTime = currentTime;
+  }
+  
+  // display (render)
+  
+  assert([self.view isKindOfClass:[ThreeDMapView class]]);
+  
+  // call the display method directly on the render view (setNeedsDisplay: has been disabled in the renderview by default)
+  [(ThreeDMapView *)self.view display];
+}
+
+- (void)stopGameLoop {
+  if(_displayLink) {
+    // Stop the display link BEFORE releasing anything in the view
+    // otherwise the display link thread may call into the view and crash
+    // when it encounters something that has been release
+    CVDisplayLinkStop(_displayLink);
+    dispatch_source_cancel(_displaySource);
+    
+    CVDisplayLinkRelease(_displayLink);
+    _displaySource = nil;
+  }
+}
+
+- (void)setPaused:(BOOL)pause {
+  if(_gameLoopPaused == pause) {
+    return;
+  }
+  
+  if(_displayLink) {
+    // inform the delegate we are about to pause
+    [_delegate viewController:self
+                    willPause:pause];
+    
+    if(pause) {
+      CVDisplayLinkStop(_displayLink);
+    } else {
+      CVDisplayLinkStart(_displayLink);
+    }
+  }
+}
+
+- (BOOL)isPaused {
+  return _gameLoopPaused;
+}
+
+- (void)didEnterBackground:(NSNotification*)notification {
+  [self setPaused:YES];
+}
+
+- (void)willEnterForeground:(NSNotification*)notification {
+  [self setPaused:NO];
+}
+
+@end

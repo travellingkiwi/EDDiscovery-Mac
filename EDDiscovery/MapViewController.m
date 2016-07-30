@@ -189,7 +189,8 @@ NS_INLINE CLLocationCoordinate2D coordinateFromEDPoint(MKMapPoint point) {
   if ([annotation isKindOfClass:[MapAnnotation class]]) {
     MKPinAnnotationView *res = [[MKPinAnnotationView alloc] initWithAnnotation:annotation reuseIdentifier:nil];
     
-    res.pinColor                  = MKPinAnnotationColorRed;
+    //res.pinColor                  = MKPinAnnotationColorRed;
+    res.pinTintColor              = MKPinAnnotationColorRed;
     res.animatesDrop              = NO;
     res.rightCalloutAccessoryView = nil;
     res.leftCalloutAccessoryView  = nil;

@@ -7,6 +7,18 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1C3FA15D1D33CBCA00252B74 /* ThreeDMapView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1C3FA15C1D33CBCA00252B74 /* ThreeDMapView.mm */; };
+		1C3FA15F1D33D1EF00252B74 /* ThreeDMapRenderer.metal in Sources */ = {isa = PBXBuildFile; fileRef = 1C3FA15E1D33D1EF00252B74 /* ThreeDMapRenderer.metal */; };
+		1C3FA1621D33D23B00252B74 /* ThreeDMapRenderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1C3FA1611D33D23B00252B74 /* ThreeDMapRenderer.mm */; };
+		1C3FA1661D346A3F00252B74 /* AAPLTransforms.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1C3FA1651D346A3F00252B74 /* AAPLTransforms.mm */; };
+		1C4344811D36A17000940E8D /* shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 1C4344801D36A17000940E8D /* shaders.metal */; };
+		1C6ADA521D3523BC004B04A4 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1C6ADA501D3523BC004B04A4 /* Metal.framework */; };
+		1C6ADA531D3523BC004B04A4 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1C6ADA511D3523BC004B04A4 /* MetalKit.framework */; };
+		1CA9FD4F1D32DE8C00A93F60 /* ThreeDMapViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1CA9FD4E1D32DE8C00A93F60 /* ThreeDMapViewController.m */; };
+		1CA9FD521D32DFB000A93F60 /* ThreeDMapAnnotation.m in Sources */ = {isa = PBXBuildFile; fileRef = 1CA9FD511D32DFB000A93F60 /* ThreeDMapAnnotation.m */; };
+		1CA9FD551D32E03100A93F60 /* ThreeDCartographicOverlay.m in Sources */ = {isa = PBXBuildFile; fileRef = 1CA9FD541D32E03100A93F60 /* ThreeDCartographicOverlay.m */; };
+		1CA9FD581D32E0C200A93F60 /* ThreeDCartographicOverlayrenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = 1CA9FD571D32E0C200A93F60 /* ThreeDCartographicOverlayrenderer.m */; };
+		1CA9FD5B1D32E10300A93F60 /* ThreeDBlackTileOverlay.m in Sources */ = {isa = PBXBuildFile; fileRef = 1CA9FD5A1D32E10300A93F60 /* ThreeDBlackTileOverlay.m */; };
 		D917A8E81CC672E20087BC07 /* EDSM+CoreDataProperties.m in Sources */ = {isa = PBXBuildFile; fileRef = D917A8E51CC672E20087BC07 /* EDSM+CoreDataProperties.m */; };
 		D917A8E91CC672E20087BC07 /* EDSM.m in Sources */ = {isa = PBXBuildFile; fileRef = D917A8E71CC672E20087BC07 /* EDSM.m */; };
 		D91CAA321CD3F8920087BC07 /* SSKeychain.m in Sources */ = {isa = PBXBuildFile; fileRef = D91CAA311CD3F8920087BC07 /* SSKeychain.m */; };
@@ -68,6 +80,17 @@
 		D9FF37901D10C4D90087BC07 /* ScreenshotCollectionViewItem.xib in Resources */ = {isa = PBXBuildFile; fileRef = D9FF378E1D10C4D90087BC07 /* ScreenshotCollectionViewItem.xib */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXBuildRule section */
+		1C5349E01D4AA720008FA184 /* PBXBuildRule */ = {
+			isa = PBXBuildRule;
+			compilerSpec = com.apple.compilers.proxy.script;
+			fileType = pattern.proxy;
+			isEditable = 1;
+			outputFiles = (
+			);
+		};
+/* End PBXBuildRule section */
+
 /* Begin PBXCopyFilesBuildPhase section */
 		D92656631CDEB24F0087BC07 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
@@ -82,6 +105,27 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		1C3FA15B1D33CBCA00252B74 /* ThreeDMapView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThreeDMapView.h; sourceTree = "<group>"; };
+		1C3FA15C1D33CBCA00252B74 /* ThreeDMapView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ThreeDMapView.mm; sourceTree = "<group>"; };
+		1C3FA15E1D33D1EF00252B74 /* ThreeDMapRenderer.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = ThreeDMapRenderer.metal; sourceTree = "<group>"; };
+		1C3FA1601D33D23B00252B74 /* ThreeDMapRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThreeDMapRenderer.h; sourceTree = "<group>"; };
+		1C3FA1611D33D23B00252B74 /* ThreeDMapRenderer.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ThreeDMapRenderer.mm; sourceTree = "<group>"; };
+		1C3FA1641D3469EC00252B74 /* AAPLTransforms.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AAPLTransforms.h; sourceTree = "<group>"; };
+		1C3FA1651D346A3F00252B74 /* AAPLTransforms.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AAPLTransforms.mm; sourceTree = "<group>"; };
+		1C4344801D36A17000940E8D /* shaders.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = shaders.metal; sourceTree = "<group>"; };
+		1C6ADA4F1D35224D004B04A4 /* AAPLSharedTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AAPLSharedTypes.h; sourceTree = "<group>"; };
+		1C6ADA501D3523BC004B04A4 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		1C6ADA511D3523BC004B04A4 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
+		1CA9FD4D1D32DE8C00A93F60 /* ThreeDMapViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThreeDMapViewController.h; sourceTree = "<group>"; };
+		1CA9FD4E1D32DE8C00A93F60 /* ThreeDMapViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ThreeDMapViewController.m; sourceTree = "<group>"; };
+		1CA9FD501D32DFB000A93F60 /* ThreeDMapAnnotation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThreeDMapAnnotation.h; sourceTree = "<group>"; };
+		1CA9FD511D32DFB000A93F60 /* ThreeDMapAnnotation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ThreeDMapAnnotation.m; sourceTree = "<group>"; };
+		1CA9FD531D32E03100A93F60 /* ThreeDCartographicOverlay.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThreeDCartographicOverlay.h; sourceTree = "<group>"; };
+		1CA9FD541D32E03100A93F60 /* ThreeDCartographicOverlay.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ThreeDCartographicOverlay.m; sourceTree = "<group>"; };
+		1CA9FD561D32E0C200A93F60 /* ThreeDCartographicOverlayrenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThreeDCartographicOverlayrenderer.h; sourceTree = "<group>"; };
+		1CA9FD571D32E0C200A93F60 /* ThreeDCartographicOverlayrenderer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ThreeDCartographicOverlayrenderer.m; sourceTree = "<group>"; };
+		1CA9FD591D32E10300A93F60 /* ThreeDBlackTileOverlay.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThreeDBlackTileOverlay.h; sourceTree = "<group>"; };
+		1CA9FD5A1D32E10300A93F60 /* ThreeDBlackTileOverlay.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ThreeDBlackTileOverlay.m; sourceTree = "<group>"; };
 		D917A8E41CC672E20087BC07 /* EDSM+CoreDataProperties.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "EDSM+CoreDataProperties.h"; sourceTree = "<group>"; };
 		D917A8E51CC672E20087BC07 /* EDSM+CoreDataProperties.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "EDSM+CoreDataProperties.m"; sourceTree = "<group>"; };
 		D917A8E61CC672E20087BC07 /* EDSM.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EDSM.h; sourceTree = "<group>"; };
@@ -198,6 +242,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1C6ADA521D3523BC004B04A4 /* Metal.framework in Frameworks */,
+				1C6ADA531D3523BC004B04A4 /* MetalKit.framework in Frameworks */,
 				D93F0F291D0856D30087BC07 /* MapKit.framework in Frameworks */,
 				D971F72B1CDCDF030087BC07 /* Crashlytics.framework in Frameworks */,
 				D92656621CDEB01F0087BC07 /* Sparkle.framework in Frameworks */,
@@ -208,6 +254,48 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		1C3FA1631D3469DB00252B74 /* Math */ = {
+			isa = PBXGroup;
+			children = (
+				1C6ADA4F1D35224D004B04A4 /* AAPLSharedTypes.h */,
+				1C3FA1641D3469EC00252B74 /* AAPLTransforms.h */,
+				1C3FA1651D346A3F00252B74 /* AAPLTransforms.mm */,
+			);
+			name = Math;
+			sourceTree = "<group>";
+		};
+		1C43447F1D36A15D00940E8D /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				1C4344801D36A17000940E8D /* shaders.metal */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+		1CA9FD4B1D32DD8900A93F60 /* 3D Map */ = {
+			isa = PBXGroup;
+			children = (
+				1C43447F1D36A15D00940E8D /* Resources */,
+				1C3FA1631D3469DB00252B74 /* Math */,
+				1C3FA15B1D33CBCA00252B74 /* ThreeDMapView.h */,
+				1C3FA15C1D33CBCA00252B74 /* ThreeDMapView.mm */,
+				1CA9FD4D1D32DE8C00A93F60 /* ThreeDMapViewController.h */,
+				1CA9FD4E1D32DE8C00A93F60 /* ThreeDMapViewController.m */,
+				1CA9FD501D32DFB000A93F60 /* ThreeDMapAnnotation.h */,
+				1CA9FD511D32DFB000A93F60 /* ThreeDMapAnnotation.m */,
+				1CA9FD531D32E03100A93F60 /* ThreeDCartographicOverlay.h */,
+				1CA9FD541D32E03100A93F60 /* ThreeDCartographicOverlay.m */,
+				1CA9FD561D32E0C200A93F60 /* ThreeDCartographicOverlayrenderer.h */,
+				1CA9FD571D32E0C200A93F60 /* ThreeDCartographicOverlayrenderer.m */,
+				1CA9FD591D32E10300A93F60 /* ThreeDBlackTileOverlay.h */,
+				1CA9FD5A1D32E10300A93F60 /* ThreeDBlackTileOverlay.m */,
+				1C3FA15E1D33D1EF00252B74 /* ThreeDMapRenderer.metal */,
+				1C3FA1601D33D23B00252B74 /* ThreeDMapRenderer.h */,
+				1C3FA1611D33D23B00252B74 /* ThreeDMapRenderer.mm */,
+			);
+			name = "3D Map";
+			sourceTree = "<group>";
+		};
 		D92656601CDEAF5E0087BC07 /* Sparkle updater */ = {
 			isa = PBXGroup;
 			children = (
@@ -315,6 +403,7 @@
 		D95E14EC1CC1AA180087BC07 /* GUI */ = {
 			isa = PBXGroup;
 			children = (
+				1CA9FD4B1D32DD8900A93F60 /* 3D Map */,
 				D9841CE71D08CA760087BC07 /* Loading */,
 				D9841CE81D08CA7B0087BC07 /* Travel History */,
 				D9841CE91D08CA870087BC07 /* Trilateration */,
@@ -462,6 +551,8 @@
 		D9BAB5CF1CC0F7D80087BC07 = {
 			isa = PBXGroup;
 			children = (
+				1C6ADA501D3523BC004B04A4 /* Metal.framework */,
+				1C6ADA511D3523BC004B04A4 /* MetalKit.framework */,
 				D93F0F281D0856D30087BC07 /* MapKit.framework */,
 				D9BAB5DA1CC0F7D80087BC07 /* EDDiscovery */,
 				D9BAB5D91CC0F7D80087BC07 /* Products */,
@@ -520,6 +611,7 @@
 				D92656631CDEB24F0087BC07 /* CopyFiles */,
 			);
 			buildRules = (
+				1C5349E01D4AA720008FA184 /* PBXBuildRule */,
 			);
 			dependencies = (
 			);
@@ -539,7 +631,7 @@
 				TargetAttributes = {
 					D9BAB5D71CC0F7D80087BC07 = {
 						CreatedOnToolsVersion = 7.3;
-						DevelopmentTeam = ZK3WXX6249;
+						DevelopmentTeam = 268BYE4QSM;
 					};
 				};
 			};
@@ -607,6 +699,7 @@
 				D91CAA321CD3F8920087BC07 /* SSKeychain.m in Sources */,
 				D9BAB5E31CC0F7D80087BC07 /* TravelHistoryViewController.m in Sources */,
 				D94DE3061CC506990087BC07 /* NetLogParser.m in Sources */,
+				1C3FA15F1D33D1EF00252B74 /* ThreeDMapRenderer.metal in Sources */,
 				D9FF378F1D10C4D90087BC07 /* ScreenshotCollectionViewItem.m in Sources */,
 				D94DE2FE1CC5028B0087BC07 /* Jump.m in Sources */,
 				D93514441CF5220A0087BC07 /* DeleteTableView.m in Sources */,
@@ -622,6 +715,8 @@
 				D94DE2931CC4EA0E0087BC07 /* EDDiscovery.xcdatamodeld in Sources */,
 				D9B5622B1CD787800087BC07 /* TrilaterationViewController.m in Sources */,
 				D95E15131CC42E620087BC07 /* EDSMConnection.m in Sources */,
+				1CA9FD551D32E03100A93F60 /* ThreeDCartographicOverlay.m in Sources */,
+				1C3FA1621D33D23B00252B74 /* ThreeDMapRenderer.mm in Sources */,
 				D9CCCFA51CDBEB160087BC07 /* DistanceNumberFormatter.m in Sources */,
 				D91CAA731CD416F10087BC07 /* Note+CoreDataProperties.m in Sources */,
 				D94DE2DF1CC5024D0087BC07 /* DBVersion+CoreDataProperties.m in Sources */,
@@ -629,24 +724,31 @@
 				D92E57221CE493E00087BC07 /* NSURLConnection+Progress.m in Sources */,
 				D93F0F261D0855BC0087BC07 /* MapViewController.m in Sources */,
 				D94DE2B41CC4FF320087BC07 /* CoreDataManager.m in Sources */,
+				1C3FA15D1D33CBCA00252B74 /* ThreeDMapView.mm in Sources */,
 				D9841CE31D08BDD30087BC07 /* MapAnnotation.m in Sources */,
 				D960B6791CDFD5A80087BC07 /* LoadingViewController.m in Sources */,
 				D92ED4661CD81C820087BC07 /* SystemData.m in Sources */,
 				D91CAA741CD416F10087BC07 /* Note.m in Sources */,
+				1CA9FD581D32E0C200A93F60 /* ThreeDCartographicOverlayrenderer.m in Sources */,
 				D94DE2FF1CC5028B0087BC07 /* System+CoreDataProperties.m in Sources */,
 				D9841CE61D08C3670087BC07 /* BlackTileOverlay.m in Sources */,
+				1CA9FD521D32DFB000A93F60 /* ThreeDMapAnnotation.m in Sources */,
 				D9AE9B3E1D103D090087BC07 /* ScreenshotMonitor.m in Sources */,
 				D952CAB81CD371BF0087BC07 /* Commander+CoreDataProperties.m in Sources */,
 				D92ED45D1CD811F00087BC07 /* SuggestedReferences.m in Sources */,
 				D92ED4601CD812D20087BC07 /* ReferencesSector.m in Sources */,
 				D920C9E71CCFA42D0087BC07 /* Distance+CoreDataProperties.m in Sources */,
+				1CA9FD5B1D32E10300A93F60 /* ThreeDBlackTileOverlay.m in Sources */,
 				D94DE3001CC5028B0087BC07 /* System.m in Sources */,
+				1C4344811D36A17000940E8D /* shaders.metal in Sources */,
 				D94DE2FC1CC5028B0087BC07 /* Image.m in Sources */,
+				1CA9FD4F1D32DE8C00A93F60 /* ThreeDMapViewController.m in Sources */,
 				D9CC87281CF8A49C0087BC07 /* NSManagedObjectModel+KCOrderedAccessorFix.m in Sources */,
 				D93F0F491D086DC10087BC07 /* CartographicOverlay.m in Sources */,
 				D9AC4C321CE1320D0087BC07 /* NSManagedObjectContext+Parenthood.m in Sources */,
 				D93F0F4A1D086DC10087BC07 /* CartographicOverlayRenderer.m in Sources */,
 				D9BAB5DD1CC0F7D80087BC07 /* AppDelegate.m in Sources */,
+				1C3FA1661D346A3F00252B74 /* AAPLTransforms.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -750,7 +852,6 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_IDENTITY = "Mac Developer";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer";
 				COMBINE_HIDPI_IMAGES = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -760,7 +861,7 @@
 				GCC_PREFIX_HEADER = EDDiscovery/PrefixHeader.pch;
 				INFOPLIST_FILE = EDDiscovery/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				PRODUCT_BUNDLE_IDENTIFIER = EDDiscovery;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
@@ -772,7 +873,6 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_IDENTITY = "Mac Developer";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer";
 				COMBINE_HIDPI_IMAGES = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -782,7 +882,7 @@
 				GCC_PREFIX_HEADER = EDDiscovery/PrefixHeader.pch;
 				INFOPLIST_FILE = EDDiscovery/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				PRODUCT_BUNDLE_IDENTIFIER = EDDiscovery;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
