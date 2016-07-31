@@ -14,7 +14,7 @@
 
 @interface ThreeDMapRenderer : NSObject <ThreeDMapViewControllerDelegate, ThreeDMapViewDelegate>
 
-#define SYSTEMS_PER_BLOCK 1000000
+#define SYSTEMS_PER_BLOCK 100000
 #define JUMPS_PER_BLOCK 1000
 
 // enum to denote the type of star
@@ -32,6 +32,13 @@ typedef struct PosVertex {
   float  posz;
 } PosVertex_t;
 
+typedef struct SystemVertex {
+  float  posx;
+  float  posy;
+  float  posz;
+  packed_float4  colour;
+} SystemVertex_t;
+
 typedef struct JourneyVertex {
   float  posx;
   float  posy;
@@ -42,7 +49,7 @@ typedef struct JourneyVertex {
 // The galaxy is made up of lots of these...
 typedef struct galaxy_block_struct {
   int numsystems;
-  PosVertex_t systems[SYSTEMS_PER_BLOCK];
+  SystemVertex_t systems[SYSTEMS_PER_BLOCK];
   
   struct galaxy_block_struct *prev;
   struct galaxy_block_struct *next;
@@ -63,10 +70,13 @@ typedef struct journey_block_struct {
 typedef struct galaxy_struct {
   //modelview_projection_matrix;
   // The main data
+  uint num_galaxy_blocks;
+  uint total_systems;
+  
   galaxy_block_t *first_galaxy_block;
   galaxy_block_t *last_galaxy_block;
 
-  int num_journey_blocks;
+  uint num_journey_blocks;
   
   journey_block_t *first_journey_block;
   journey_block_t *last_journey_block;
@@ -77,5 +87,6 @@ typedef struct galaxy_struct {
 // load all assets before triggering rendering
 - (void)configure:(ThreeDMapView *)view galaxy:(galaxy_t *)galaxy;
 - (void)setVertexBuffer:(galaxy_t *)galaxy;
+- (void)setPosition:(float)x y:(float)y z:(float)z;
 
 @end

@@ -18,6 +18,8 @@
 #import "MapAnnotation.h"
 #import "BlackTileOverlay.h"
 
+#import <simd/simd.h>
+
 //boundaries of galaxy, in ED coordinate system
 
 #define MINX -45000
@@ -217,9 +219,11 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
     
     galaxy.num_journey_blocks=1;
   }
+  
+  JourneyVertex_t *point=NULL;
   for (Jump *jump in jumps) {
     if (jump.system.hasCoordinates) { // && !jump.hidden) {
-      JourneyVertex_t *point=&journey->systems[journey->numsystems];
+      point=&journey->systems[journey->numsystems];
       
       point->posx = jump.system.x/LY_2_MTL;
       point->posy = jump.system.y/LY_2_MTL;
@@ -240,16 +244,82 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
       NSLog(@"%s: Jump Point - has no co-ordinates", __FUNCTION__);
     }
   }
+  
+  Jump *last=[Jump lastXYZJumpOfCommander:Commander.activeCommander];
+  [_renderer setPosition:last.system.x/LY_2_MTL y:last.system.y/LY_2_MTL z:last.system.z/LY_2_MTL];
+  
   NSLog(@"%s: Finished loading jumps", __FUNCTION__);
 
   // Now load the systems in the galaxy... Hmm... Wonder how long 1000000 vertices take to load...
-  
+#define DRAWGALAXY
 #ifdef DRAWGALAXY
   // To then get all the systems...
   
-  NSArray *galaxy=[System allSystemsInContext:Commander.managedObjectContext];
-  
-  
+  NSLog(@"%s: Loading Galaxy", __FUNCTION__);
+
+  NSArray *allSystems=[System allSystemsInContext:MAIN_CONTEXT];
+  galaxy_block_t *gb=galaxy.first_galaxy_block;
+  if(gb==NULL) {
+    NSLog(@"%s: gb is NULL - allocating %lu bytes for new one", __FUNCTION__, sizeof(galaxy_block_t));
+    
+    if((gb=calloc(sizeof(galaxy_block_t), 1))==NULL) {
+      NSLog(@"%s: Unable to calloc %lu Bytes for galaxy_block_t", __FUNCTION__, sizeof(galaxy_block_t));
+      exit(-1);
+    }
+    galaxy.first_galaxy_block=gb;
+    galaxy.last_galaxy_block=gb;
+    
+    galaxy.num_galaxy_blocks=1;
+  }
+  for (System *system in allSystems) {
+    if(system.hasCoordinates) {
+      if(gb==NULL) {
+        NSLog(@"%s: gb is NULL - allocating %lu bytes for new one", __FUNCTION__, sizeof(galaxy_block_t));
+        
+        if((gb=calloc(sizeof(galaxy_block_t), 1))==NULL) {
+          NSLog(@"%s: Unable to calloc %lu Bytes for galaxy_block_t", __FUNCTION__, sizeof(galaxy_block_t));
+          exit(-1);
+        }
+        gb->prev=galaxy.last_galaxy_block;
+        gb->next=NULL;
+        if(galaxy.first_galaxy_block==NULL) {
+          galaxy.first_galaxy_block=gb;
+        }
+        
+        if(galaxy.last_galaxy_block!=NULL) {
+          galaxy.last_galaxy_block->next=gb;
+        }
+        
+        galaxy.last_galaxy_block=gb;
+        
+        galaxy.num_galaxy_blocks++;
+
+      }
+      SystemVertex_t *point=&gb->systems[gb->numsystems];
+      
+      point->posx = system.x/LY_2_MTL;
+      point->posy = system.y/LY_2_MTL;
+      point->posz = system.z/LY_2_MTL;
+      
+      // Should be yellow?
+      point->colour[0]=0.8f;
+      point->colour[1]=0.8f;
+      point->colour[2]=0.0f;
+      point->colour[3]=0.5f;
+
+      if((galaxy.total_systems % 1000)==0) {
+        NSLog(@"%s: System %d %@ BLOCK %d SBCOUNT %d (%8.4f %8.4f %8.4f)", __FUNCTION__, galaxy.total_systems, system.name, galaxy.num_galaxy_blocks, gb->numsystems, system.x, system.y, system.z);
+      }
+      
+      galaxy.total_systems++;
+
+      if(++gb->numsystems >= SYSTEMS_PER_BLOCK) {
+        gb=gb->next;
+      }
+    }
+  }
+  NSLog(@"%s: Galaxy Loaded %d systems into %d blocks", __FUNCTION__, galaxy.total_systems, galaxy.num_galaxy_blocks);
+
 #endif
   [_renderer setVertexBuffer:&galaxy];
 }

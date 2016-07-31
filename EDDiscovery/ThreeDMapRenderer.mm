@@ -19,6 +19,8 @@
 #import "AAPLTransforms.h"
 #import "AAPLSharedTypes.h"
 
+#import "Jump.h"
+
 using namespace AAPL;
 using namespace simd;
 
@@ -34,8 +36,10 @@ static const float4 kBoxDiffuseColors[2] = {
   {0.8, 0.4, 0.4, 1.0}
 };
 
-
+#define DRAWJOURNEY
+#define DRAWGALAXY
 #define DRAWAXES
+
 #ifdef DRAWAXES
 static const float sol_axes[42] = {
    0.0,  0.0,  0.0, 1.0, 0.0, 0.0, 1.0,
@@ -63,10 +67,12 @@ static const float gal_axes[42] = {
 
 #endif
 
-static const float kFOVY    = 100.0f;
-static const float3 kEye    = {15.0f,  5.0f,  5.0f};
-static const float3 kCenter = { 0.0f,  0.0f,  0.0f};
+static const float kFOVY    = 65.0f;
 static const float3 kUp     = { 0.0f,  1.0f,  0.0f};
+
+//
+static float3 kCentre = { 0.0f,  0.0f,  0.0f};
+static float3 kEye    = {10.0f,  5.0f,  5.0f};
 
 
 galaxy_t *thisGalaxy;
@@ -95,6 +101,20 @@ galaxy_t *thisGalaxy;
   // this value will cycle from 0 to g_max_inflight_buffers whenever a display completes ensuring renderer clients
   // can synchronize between g_max_inflight_buffers count buffers, and thus avoiding a constant buffer from being overwritten between draws
   NSUInteger _constantDataBufferIndex;
+}
+
+- (void)setPosition:(float)x y:(float)y z:(float)z  {
+  kCentre[0]=x;
+  kCentre[1]=y;
+  kCentre[2]=z;
+  
+  kEye[0]=kCentre[0]+10.0f;
+  kEye[1]=kCentre[1]+5.0f;
+  kEye[2]=kCentre[2]+5.0f;
+  
+  NSLog(@"%s: kCentre set [%8.4f %8.4f %8.4f]", __FUNCTION__, kCentre[0], kCentre[1], kCentre[2]);
+  NSLog(@"%s: kEye    set [%8.4f %8.4f %8.4f]", __FUNCTION__, kEye[0], kEye[1], kEye[2]);
+  
 }
 
 - (instancetype)init {
@@ -252,7 +272,9 @@ galaxy_t *thisGalaxy;
 #pragma mark Render
 
 - (void)render:(ThreeDMapView *)view {
+#ifdef DEBUG_RENDER
   NSLog(@"%s: rendering", __FUNCTION__);
+#endif
   // Allow the renderer to preflight 3 frames on the CPU (using a semapore as a guard) and commit them to the GPU.
   // This semaphore will get signaled once the GPU completes a frame's work via addCompletedHandler callback below,
   // signifying the CPU can go ahead and prepare another frame.
@@ -272,27 +294,10 @@ galaxy_t *thisGalaxy;
     [renderEncoder setDepthStencilState:_depthState];
     [renderEncoder setRenderPipelineState:_pipelineState];
     
-    journey_block_t *jb=thisGalaxy->first_journey_block;
-    for (int i = 0; i < thisGalaxy->num_journey_blocks; i++) {
-      NSLog(@"%s: %d systems block %d of %d", __FUNCTION__, jb->numsystems, i, thisGalaxy->num_journey_blocks);
-
-      id <MTLBuffer> _vertexBuffer;
-
-      _vertexBuffer = [_device newBufferWithBytes:jb->systems length:sizeof(JourneyVertex_t)*jb->numsystems options:MTLResourceOptionCPUCacheModeDefault];
-      _vertexBuffer.label = @"Vertices";
-      
-      //  set vertex buffer for each journey segment
-      [renderEncoder setVertexBuffer:_vertexBuffer offset:0 atIndex:0 ];
-      [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
-
-      // tell the render context we want to draw our primitives
-      [renderEncoder drawPrimitives:MTLPrimitiveTypeLineStrip vertexStart:0 vertexCount:jb->numsystems];
-      NSLog(@"%s: encoded MTLPrimitiveTypeLineStrip vertexcount %d", __FUNCTION__, jb->numsystems);
-      jb=jb->next;
-    }
-    
 #ifdef DRAWAXES
     // Draw the axes....
+    [renderEncoder pushDebugGroup:@"Axes"];
+
     id <MTLBuffer> _sol_axesBuffer;
     _sol_axesBuffer = [_device newBufferWithBytes:sol_axes length:sizeof(float)*42 options:MTLResourceOptionCPUCacheModeDefault];
     _sol_axesBuffer.label = @"SolAxes";
@@ -302,7 +307,9 @@ galaxy_t *thisGalaxy;
     [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
     
     [renderEncoder drawPrimitives:MTLPrimitiveTypeLine vertexStart:0 vertexCount:6];
+#ifdef DEBUG_RENDER
     NSLog(@"%s: encoded Sol Axes MTLPrimitiveTypeLine vertexcount %d", __FUNCTION__, 6);
+#endif
     
     id <MTLBuffer> _gal_axesBuffer;
     _gal_axesBuffer = [_device newBufferWithBytes:gal_axes length:sizeof(float)*42 options:MTLResourceOptionCPUCacheModeDefault];
@@ -313,12 +320,68 @@ galaxy_t *thisGalaxy;
     [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
     
     [renderEncoder drawPrimitives:MTLPrimitiveTypeLine vertexStart:0 vertexCount:6];
+#ifdef DEBUG_RENDER
     NSLog(@"%s: encoded Gal Axes MTLPrimitiveTypeLine vertexcount %d", __FUNCTION__, 6);
-    
-    
+#endif
+    [renderEncoder popDebugGroup];
+
     
 #endif
     
+#ifdef DRAWGALAXY
+    [renderEncoder pushDebugGroup:@"Galaxy"];
+
+    galaxy_block_t *gb=thisGalaxy->first_galaxy_block;
+    for (int i = 0; i < thisGalaxy->num_galaxy_blocks; i++) {
+#ifdef DEBUG_RENDER
+      NSLog(@"%s: %d galaxy block %d of %d", __FUNCTION__, gb->numsystems, i, thisGalaxy->num_galaxy_blocks);
+#endif
+      
+      id <MTLBuffer> _vertexBuffer;
+      
+      _vertexBuffer = [_device newBufferWithBytes:gb->systems length:sizeof(SystemVertex_t)*gb->numsystems options:MTLResourceOptionCPUCacheModeDefault];
+      _vertexBuffer.label = @"Systems";
+      
+      //  set vertex buffer for each journey segment
+      [renderEncoder setVertexBuffer:_vertexBuffer offset:0 atIndex:0 ];
+      [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
+      
+      // tell the render context we want to draw our primitives
+      [renderEncoder drawPrimitives:MTLPrimitiveTypePoint vertexStart:0 vertexCount:gb->numsystems];
+#ifdef DEBUG_RENDER
+      NSLog(@"%s: encoded MTLPrimitiveTypePoint vertexcount %d", __FUNCTION__, gb->numsystems);
+#endif
+      gb=gb->next;
+    }
+    [renderEncoder popDebugGroup];
+
+    
+#endif
+    
+#ifdef DRAWJOURNEY
+    journey_block_t *jb=thisGalaxy->first_journey_block;
+    for (int i = 0; i < thisGalaxy->num_journey_blocks; i++) {
+#ifdef DEBUG_RENDER
+      NSLog(@"%s: %d systems block %d of %d", __FUNCTION__, jb->numsystems, i, thisGalaxy->num_journey_blocks);
+#endif
+      id <MTLBuffer> _vertexBuffer;
+      
+      _vertexBuffer = [_device newBufferWithBytes:jb->systems length:sizeof(JourneyVertex_t)*jb->numsystems options:MTLResourceOptionCPUCacheModeDefault];
+      _vertexBuffer.label = @"Vertices";
+      
+      //  set vertex buffer for each journey segment
+      [renderEncoder setVertexBuffer:_vertexBuffer offset:0 atIndex:0 ];
+      [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
+      
+      // tell the render context we want to draw our primitives
+      [renderEncoder drawPrimitives:MTLPrimitiveTypeLineStrip vertexStart:0 vertexCount:jb->numsystems ];
+#ifdef DEBUG_RENDER
+      NSLog(@"%s: encoded MTLPrimitiveTypeLineStrip vertexcount %d", __FUNCTION__, jb->numsystems);
+#endif
+      jb=jb->next;
+    }
+#endif
+
     [renderEncoder endEncoding];
     [renderEncoder popDebugGroup];
     
@@ -349,7 +412,7 @@ galaxy_t *thisGalaxy;
   // when reshape is called, update the view and projection matricies since this means the view orientation or size changed
   float aspect = fabs(view.bounds.size.width / view.bounds.size.height);
   _projectionMatrix = perspective_fov(kFOVY, aspect, 0.1f, 100.0f);
-  _viewMatrix = lookAt(kEye, kCenter, kUp);
+  _viewMatrix = lookAt(kEye, kCentre, kUp);
   
   NSLog(@"%s: (reshaped aspect=%8.4f)", __FUNCTION__, aspect);
   
@@ -359,7 +422,8 @@ galaxy_t *thisGalaxy;
 
 // called every frame
 - (void)updateConstantBuffer {
-  float4x4 baseModelViewMatrix = translate(0.0f, 0.0f, 5.0f) * rotate(_rotation, 0.0f, 1.0f, 0.0f);
+  
+  float4x4 baseModelViewMatrix = translate(0.0f, 0.0f, 0.0f) * rotate(_rotation, 0.0f, 1.0f, 0.0f);
   baseModelViewMatrix = _viewMatrix * baseModelViewMatrix;
   
   constants_t *constant_buffer = (constants_t *)[_dynamicConstantBuffer[_constantDataBufferIndex] contents];
@@ -383,7 +447,9 @@ galaxy_t *thisGalaxy;
   } else {
     constant_buffer[i].ambient_color.y += constant_buffer[i].multiplier * 0.01*i;
   }
+#ifdef DEBUG_RENDER
   NSLog(@"%s: matrix ambient_colour %8.4f rotation %8.4f", __FUNCTION__, constant_buffer[i].ambient_color.y, _rotation);
+#endif
 }
 
 // just use this to update app globals
