@@ -1,10 +1,11 @@
-/*
- Copyright (C) 2015 Apple Inc. All Rights Reserved.
- See LICENSE.txt for this sample’s licensing information
- 
- Abstract:
- View Controller for Metal Sample Code. Maintains a CADisplayLink timer that runs on the main thread and triggers rendering in AAPLView. Provides update callbacks to its delegate on the timer, prior to triggering rendering.
- */
+//
+//  3DMapViewController.h
+//  EDDiscovery
+//
+//  3D Views by Hamish Marson <hamish@travellingkiwi.com> 10/07/2016
+//  Copyright © 2016 Hamish Marson. All rights reserved.
+//
+//  Based on Apple MetalRenderer example
 
 #import <AppKit/AppKit.h>
 
@@ -12,7 +13,7 @@
 
 @protocol ThreeDMapViewControllerDelegate;
 
-@interface ThreeDMapViewController : NSViewController
+@interface ThreeDMapViewController : NSViewController 
 
 @property (nonatomic, weak) id <ThreeDMapViewControllerDelegate> delegate;
 
@@ -41,4 +42,6 @@
 
 // called whenever the main game loop is paused, such as when the app is backgrounded
 - (void)viewController:(ThreeDMapViewController *)controller willPause:(BOOL)pause;
+
 @end
+

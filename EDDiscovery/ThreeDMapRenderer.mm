@@ -1,20 +1,16 @@
 //
-//  NSObject+ThreeDMapRenderer.m
+//  ThreeDMapRenderer.h
 //  EDDiscovery
 //
-//  Created by Hamish Marson on 11/07/2016.
-//  Copyright © 2016 Michele Noberasco. All rights reserved.
+//  3D Views by Hamish Marson <hamish@travellingkiwi.com> 10/07/2016
+//  Copyright © 2016 Hamish Marson. All rights reserved.
 //
+//  Based on Apple MetalRenderer example
+
+#import <Metal/Metal.h>
+#import <QuartzCore/CAMetalLayer.h>
 
 #import "ThreeDMapRenderer.h"
-
-/*
- Copyright (C) 2015 Apple Inc. All Rights Reserved.
- See LICENSE.txt for this sample’s licensing information
- 
- Abstract:
- Metal Renderer for Metal Basic 3D. Acts as the update and render delegate for the view controller and performs rendering. In MetalBasic3D, the renderer draws 2 cubes, whos color values change every update.
- */
 
 #import "AAPLTransforms.h"
 #import "AAPLSharedTypes.h"
@@ -24,8 +20,11 @@
 using namespace AAPL;
 using namespace simd;
 
-static const long kInFlightCommandBuffers = 3;
+//
+// How many buffers to use in parallel for drawing... Apple use 3 (Triple Buffering) in their examples.
+static const long kInFlightCommandBuffers = 4;
 
+#if 0
 static const float4 kBoxAmbientColors[2] = {
   {0.18, 0.24, 0.8, 1.0},
   {0.8, 0.24, 0.1, 1.0}
@@ -35,34 +34,45 @@ static const float4 kBoxDiffuseColors[2] = {
   {0.4, 0.4, 1.0, 1.0},
   {0.8, 0.4, 0.4, 1.0}
 };
+#endif
 
 #define DRAWJOURNEY
 #define DRAWGALAXY
 #define DRAWAXES
 
 #ifdef DRAWAXES
+#define AXES_LEN  500.0/LY_2_MTL
+
+#define SOLS_X    0.0
+#define SOLS_Y    0.0
+#define SOLS_Z    0.0
+
+#define START_EYE_X  1000.0
+#define START_EYE_Y   000.0
+#define START_EYE_Z  1000.0
+
+#define POINT_SCALE     5.0
+
 static const float sol_axes[42] = {
-   0.0,  0.0,  0.0, 1.0, 0.0, 0.0, 1.0,
-   5.0,  0.0,  0.0, 1.0, 0.0, 0.0, 1.0,
-   0.0,  0.0,  0.0, 1.0, 0.0, 0.0, 1.0,
-   0.0,  5.0,  0.0, 1.0, 0.0, 0.0, 1.0,
-   0.0,  0.0,  0.0, 1.0, 0.0, 0.0, 1.0,
-   0.0,  0.0,  5.0, 1.0, 0.0, 0.0, 1.0
+  SOLS_X-AXES_LEN, SOLS_Y,          SOLS_Z,
+  SOLS_X+AXES_LEN, SOLS_Y,          SOLS_Z,
+  SOLS_X,          SOLS_Y-AXES_LEN, SOLS_Z,
+  SOLS_X,          SOLS_Y+AXES_LEN, SOLS_Z,
+  SOLS_X,          SOLS_Y,          SOLS_Z-AXES_LEN,
+  SOLS_X,          SOLS_Y,          SOLS_Z+AXES_LEN,
 };
 
 #define SAGA_X    (25.21875/LY_2_MTL)
 #define SAGA_Y   (-20.90625/LY_2_MTL)
 #define SAGA_Z (25899.96875/LY_2_MTL)
 
-#define AXES_LEN  5.0
-
 static const float gal_axes[42] = {
-  SAGA_X,          SAGA_Y,          SAGA_Z,          0.0, 0.0, !.0, 1.0,
-  SAGA_X+AXES_LEN, SAGA_Y,          SAGA_Z,          0.0, 0.0, 1.0, 1.0,
-  SAGA_X,          SAGA_Y,          SAGA_Z,          0.0, 0.0, 1.0, 1.0,
-  SAGA_X,          SAGA_Y+AXES_LEN, SAGA_Z,          0.0, 0.0, 1.0, 1.0,
-  SAGA_X,          SAGA_Y,          SAGA_Z,          0.0, 0.0, 1.0, 1.0,
-  SAGA_X,          SAGA_Y,          SAGA_Z+AXES_LEN, 0.0, 0.0, 1.0, 1.0
+  SAGA_X-AXES_LEN, SAGA_Y,          SAGA_Z,
+  SAGA_X+AXES_LEN, SAGA_Y,          SAGA_Z,
+  SAGA_X,          SAGA_Y-AXES_LEN, SAGA_Z,
+  SAGA_X,          SAGA_Y+AXES_LEN, SAGA_Z,
+  SAGA_X,          SAGA_Y,          SAGA_Z-AXES_LEN,
+  SAGA_X,          SAGA_Y,          SAGA_Z+AXES_LEN
 };
 
 #endif
@@ -70,13 +80,40 @@ static const float gal_axes[42] = {
 static const float kFOVY    = 65.0f;
 static const float3 kUp     = { 0.0f,  1.0f,  0.0f};
 
+float model_scale = 1.0f;
+
 //
 static float3 kCentre = { 0.0f,  0.0f,  0.0f};
-static float3 kEye    = {10.0f,  5.0f,  5.0f};
+static float3 kEye    = {START_EYE_X/LY_2_MTL, START_EYE_Y/LY_2_MTL, START_EYE_Z/LY_2_MTL};
 
 
 galaxy_t *thisGalaxy;
 
+#define COLOUR_IND_STAR     0
+#define COLOUR_IND_JOURNEY  1
+#define COLOUR_IND_JSTAR    2
+#define COLOUR_IND_AXES_SOL 3
+#define COLOUR_IND_AXES_SAG 4
+#define COLOUR_IND_STATION  5
+
+#define MAX_COLOUR_INDEX    6
+
+static const float4 colours[MAX_COLOUR_INDEX]= {
+  { 1.0, 1.0, 0.0, 1.0},                             // COLOUR_IND_STAR
+  { 0.0, 1.0, 0.0, 1.0},                             // COLOUR_IND_JOURNEY
+  { 1.0, 1.0, 1.0, 1.0},                             // COLOUR_IND_JSTAR
+  { 1.0, 0.0, 0.0, 1.0},                             // COLOUR_IND_AXES_SOL
+  { 0.0, 0.0, 1.0, 1.0},                             // COLOUR_IND_AXE
+  { 1.0, 0.0, 1.0, 1.0},                             // COLOUR_IND_STATION
+};
+
+#define POINT_IND_DEFAULT 0
+#define POINT_IND_JSTAR   1
+#define POINT_IND_BLINE   2
+#define POINT_IND_STATION 3
+#define MAX_POINT_SIZES   4
+
+static const float pointsize[MAX_POINT_SIZES]={1.0, 15.00, 20.000, 15.00};
 
 @implementation ThreeDMapRenderer {
   // constant synchronization for buffering <kInFlightCommandBuffers> frames
@@ -89,7 +126,11 @@ galaxy_t *thisGalaxy;
   id <MTLLibrary> _defaultLibrary;
   id <MTLRenderPipelineState> _pipelineState;
   id <MTLDepthStencilState> _depthState;
-  
+
+  // For clearing the screen
+  id<CAMetalDrawable> _drawable;
+  id<MTLTexture> _texture;
+
   // globals used in update calculation
   float4x4 _projectionMatrix;
   float4x4 _viewMatrix;
@@ -101,16 +142,26 @@ galaxy_t *thisGalaxy;
   // this value will cycle from 0 to g_max_inflight_buffers whenever a display completes ensuring renderer clients
   // can synchronize between g_max_inflight_buffers count buffers, and thus avoiding a constant buffer from being overwritten between draws
   NSUInteger _constantDataBufferIndex;
+  
 }
+
+static char *features[MAX_FEATURES] = {
+  "Journey", "JStars", "Stations",
+};
+
+static BOOL enabled[MAX_FEATURES] = {1, 1, 1};
 
 - (void)setPosition:(float)x y:(float)y z:(float)z  {
   kCentre[0]=x;
   kCentre[1]=y;
   kCentre[2]=z;
   
-  kEye[0]=kCentre[0]+10.0f;
-  kEye[1]=kCentre[1]+5.0f;
-  kEye[2]=kCentre[2]+5.0f;
+  //kEye[0]=kCentre[0]+10.0f;
+  //kEye[1]=kCentre[1]+5.0f;
+  //kEye[2]=kCentre[2]+5.0f;
+  kEye[0]=kCentre[0]+(START_EYE_X/LY_2_MTL);
+  kEye[1]=kCentre[1]+(START_EYE_Y/LY_2_MTL);
+  kEye[2]=kCentre[2]+(START_EYE_Z/LY_2_MTL);
   
   NSLog(@"%s: kCentre set [%8.4f %8.4f %8.4f]", __FUNCTION__, kCentre[0], kCentre[1], kCentre[2]);
   NSLog(@"%s: kEye    set [%8.4f %8.4f %8.4f]", __FUNCTION__, kEye[0], kEye[1], kEye[2]);
@@ -123,12 +174,13 @@ galaxy_t *thisGalaxy;
     
     _sizeOfConstantT = sizeof(constants_t);
     
-#pragma FIXME_NO_HARDCODE
+#warning FIXME_NO_HARDCODE
     _maxBufferBytesPerFrame = 8192;
     
     _constantDataBufferIndex = 0;
     _inflight_semaphore = dispatch_semaphore_create(kInFlightCommandBuffers);
   }
+  
   return self;
 }
 
@@ -180,30 +232,27 @@ galaxy_t *thisGalaxy;
     for (int j = 0; j < 1; j++) {
       if (j%2==0) {
         constant_buffer[j].multiplier = 1;
-        constant_buffer[j].ambient_color = kBoxAmbientColors[0];
-        constant_buffer[j].diffuse_color = kBoxDiffuseColors[0];
+        // constant_buffer[j].ambient_color = kBoxAmbientColors[0];
+        // constant_buffer[j].diffuse_color = kBoxDiffuseColors[0];
       }
       else {
         constant_buffer[j].multiplier = -1;
-        constant_buffer[j].ambient_color = kBoxAmbientColors[1];
-        constant_buffer[j].diffuse_color = kBoxDiffuseColors[1];
+        // constant_buffer[j].ambient_color = kBoxAmbientColors[1];
+        // constant_buffer[j].diffuse_color = kBoxDiffuseColors[1];
       }
     }
   }
   
   thisGalaxy=galaxy;
+
+
 }
 
 - (void)setVertexBuffer:(galaxy_t *)galaxy {
+  NSLog(@"%s:", __FUNCTION__);
 
   // setup the vertex buffers
-  //_vertexBuffer = [_device newBufferWithBytes:kCubeVertexData length:sizeof(kCubeVertexData) options:MTLResourceOptionCPUCacheModeDefault];
   if((galaxy!=nil) && (galaxy->first_journey_block!=nil)) {
-#if 0
-    NSLog(@"%s: Setting with %d jumps", __FUNCTION__, galaxy->first_journey_block->numsystems);
-    _vertexBuffer = [_device newBufferWithBytes:galaxy->first_journey_block->systems length:sizeof(JourneyVertex_t)*galaxy->first_journey_block->numsystems options:MTLResourceOptionCPUCacheModeDefault];
-    _vertexBuffer.label = @"Vertices";
-#endif
     
   } else {
     if(galaxy==nil) {
@@ -233,19 +282,6 @@ galaxy_t *thisGalaxy;
     NSLog(@">> ERROR: Couldn't load journey vertex function from default library");
     exit(-1);
   }
-  
-#if 0
-  // setup the vertex buffers
-  //_vertexBuffer = [_device newBufferWithBytes:kCubeVertexData length:sizeof(kCubeVertexData) options:MTLResourceOptionCPUCacheModeDefault];
-  if((thisGalaxy!=nil) && (thisGalaxy->first_journey_block!=nil)) {
-    _vertexBuffer = [_device newBufferWithBytes:thisGalaxy->first_journey_block->systems length:sizeof(JourneyVertex_t)*thisGalaxy->first_journey_block->numsystems options:MTLResourceOptionCPUCacheModeDefault];
-    _vertexBuffer.label = @"Vertices";
-  }
-#endif
-#if 0
-  // Set dynamically in each render frame...
-  [self setVertexBuffer:thisGalaxy];
-#endif
   
   // create a pipeline state descriptor which can be used to create a compiled pipeline state object
   MTLRenderPipelineDescriptor *pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
@@ -287,17 +323,36 @@ galaxy_t *thisGalaxy;
   id <MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
   
   // create a render command encoder so we can render into something
-  MTLRenderPassDescriptor *renderPassDescriptor = view.renderPassDescriptor;
+  MTLRenderPassDescriptor *renderPassDescriptor =view.renderPassDescriptor;
   if (renderPassDescriptor) {
+    
+#if 0
+    // This creates a texture the size of the view... Sets it to black... And draws it (To clear the screen to black).
+    _drawable = view.currentDrawable;
+    _texture = _drawable.texture;
+    
+    renderPassDescriptor.colorAttachments[0].texture = _texture;
+    renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
+    renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
+    renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.1, 0.1, 0.1, 1.0);
+#endif
+    
     id <MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-    [renderEncoder pushDebugGroup:@"Journey"];
+
+    [renderEncoder pushDebugGroup:@"ClearScreen"];
     [renderEncoder setDepthStencilState:_depthState];
     [renderEncoder setRenderPipelineState:_pipelineState];
-    
+ 
 #ifdef DRAWAXES
     // Draw the axes....
     [renderEncoder pushDebugGroup:@"Axes"];
 
+    simd::float4 axes_colour_sol;
+    axes_colour_sol[0]=1.0;
+    axes_colour_sol[1]=0.0;
+    axes_colour_sol[2]=0.0;
+    axes_colour_sol[3]=1.0;
+    
     id <MTLBuffer> _sol_axesBuffer;
     _sol_axesBuffer = [_device newBufferWithBytes:sol_axes length:sizeof(float)*42 options:MTLResourceOptionCPUCacheModeDefault];
     _sol_axesBuffer.label = @"SolAxes";
@@ -305,11 +360,19 @@ galaxy_t *thisGalaxy;
     //  set vertex buffer for each journey segment
     [renderEncoder setVertexBuffer:_sol_axesBuffer offset:0 atIndex:0 ];
     [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
+    [renderEncoder setVertexBytes:&colours[COLOUR_IND_AXES_SOL] length:sizeof(float4) atIndex:2 ];
+    [renderEncoder setVertexBytes:&pointsize[POINT_IND_DEFAULT] length:sizeof(float) atIndex:3 ];
     
     [renderEncoder drawPrimitives:MTLPrimitiveTypeLine vertexStart:0 vertexCount:6];
 #ifdef DEBUG_RENDER
     NSLog(@"%s: encoded Sol Axes MTLPrimitiveTypeLine vertexcount %d", __FUNCTION__, 6);
 #endif
+    
+    simd::float4 axes_colour_saga;
+    axes_colour_saga[0]=0.0;
+    axes_colour_saga[1]=0.0;
+    axes_colour_saga[2]=1.0;
+    axes_colour_saga[3]=1.0;
     
     id <MTLBuffer> _gal_axesBuffer;
     _gal_axesBuffer = [_device newBufferWithBytes:gal_axes length:sizeof(float)*42 options:MTLResourceOptionCPUCacheModeDefault];
@@ -318,7 +381,9 @@ galaxy_t *thisGalaxy;
     //  set vertex buffer for each journey segment
     [renderEncoder setVertexBuffer:_gal_axesBuffer offset:0 atIndex:0 ];
     [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
-    
+    [renderEncoder setVertexBytes:&colours[COLOUR_IND_AXES_SAG] length:sizeof(float4) atIndex:2 ];
+    [renderEncoder setVertexBytes:&pointsize[POINT_IND_DEFAULT] length:sizeof(float) atIndex:3 ];
+
     [renderEncoder drawPrimitives:MTLPrimitiveTypeLine vertexStart:0 vertexCount:6];
 #ifdef DEBUG_RENDER
     NSLog(@"%s: encoded Gal Axes MTLPrimitiveTypeLine vertexcount %d", __FUNCTION__, 6);
@@ -330,7 +395,12 @@ galaxy_t *thisGalaxy;
     
 #ifdef DRAWGALAXY
     [renderEncoder pushDebugGroup:@"Galaxy"];
-
+    simd::float4 colour_systems;
+    colour_systems[0]=0.0;
+    colour_systems[1]=0.0;
+    colour_systems[2]=1.0;
+    colour_systems[3]=1.0;
+    
     galaxy_block_t *gb=thisGalaxy->first_galaxy_block;
     for (int i = 0; i < thisGalaxy->num_galaxy_blocks; i++) {
 #ifdef DEBUG_RENDER
@@ -345,7 +415,10 @@ galaxy_t *thisGalaxy;
       //  set vertex buffer for each journey segment
       [renderEncoder setVertexBuffer:_vertexBuffer offset:0 atIndex:0 ];
       [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
-      
+      [renderEncoder setVertexBytes:&colours[COLOUR_IND_STAR] length:sizeof(float4) atIndex:2 ];
+      float starSize=pointsize[POINT_IND_DEFAULT]*(model_scale/POINT_SCALE);
+      [renderEncoder setVertexBytes:&starSize length:sizeof(float) atIndex:3 ];
+
       // tell the render context we want to draw our primitives
       [renderEncoder drawPrimitives:MTLPrimitiveTypePoint vertexStart:0 vertexCount:gb->numsystems];
 #ifdef DEBUG_RENDER
@@ -359,29 +432,124 @@ galaxy_t *thisGalaxy;
 #endif
     
 #ifdef DRAWJOURNEY
-    journey_block_t *jb=thisGalaxy->first_journey_block;
-    for (int i = 0; i < thisGalaxy->num_journey_blocks; i++) {
-#ifdef DEBUG_RENDER
-      NSLog(@"%s: %d systems block %d of %d", __FUNCTION__, jb->numsystems, i, thisGalaxy->num_journey_blocks);
-#endif
-      id <MTLBuffer> _vertexBuffer;
-      
-      _vertexBuffer = [_device newBufferWithBytes:jb->systems length:sizeof(JourneyVertex_t)*jb->numsystems options:MTLResourceOptionCPUCacheModeDefault];
-      _vertexBuffer.label = @"Vertices";
-      
-      //  set vertex buffer for each journey segment
-      [renderEncoder setVertexBuffer:_vertexBuffer offset:0 atIndex:0 ];
-      [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
-      
-      // tell the render context we want to draw our primitives
-      [renderEncoder drawPrimitives:MTLPrimitiveTypeLineStrip vertexStart:0 vertexCount:jb->numsystems ];
-#ifdef DEBUG_RENDER
-      NSLog(@"%s: encoded MTLPrimitiveTypeLineStrip vertexcount %d", __FUNCTION__, jb->numsystems);
-#endif
-      jb=jb->next;
-    }
-#endif
+    if(enabled[FEATURE_JOURNEY]) {
+      [renderEncoder pushDebugGroup:@"Journey"];
 
+      simd::float4 colour_journey;
+      colour_journey[0]=0.0;
+      colour_journey[1]=1.0;
+      colour_journey[2]=0.0;
+      colour_journey[3]=1.0;
+    
+      journey_block_t *jb=thisGalaxy->first_journey_block;
+      for (int i = 0; i < thisGalaxy->num_journey_blocks; i++) {
+#ifdef DEBUG_RENDER
+        NSLog(@"%s: %d systems block %d of %d", __FUNCTION__, jb->numsystems, i, thisGalaxy->num_journey_blocks);
+#endif
+        id <MTLBuffer> _vertexBuffer;
+      
+        _vertexBuffer = [_device newBufferWithBytes:jb->systems length:sizeof(JourneyVertex_t)*jb->numsystems options:MTLResourceOptionCPUCacheModeDefault];
+        _vertexBuffer.label = @"Vertices";
+      
+        //  set vertex buffer for each journey segment
+        [renderEncoder setVertexBuffer:_vertexBuffer offset:0 atIndex:0 ];
+        [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
+        [renderEncoder setVertexBytes:&colours[COLOUR_IND_JOURNEY] length:sizeof(float4) atIndex:2 ];
+        float starSize=pointsize[POINT_IND_BLINE]*(model_scale/POINT_SCALE);
+        [renderEncoder setVertexBytes:&starSize length:sizeof(float) atIndex:3 ];
+
+        // tell the render context we want to draw our primitives
+        [renderEncoder drawPrimitives:MTLPrimitiveTypeLineStrip vertexStart:0 vertexCount:jb->numsystems ];
+#ifdef DEBUG_RENDER
+        NSLog(@"%s: encoded MTLPrimitiveTypeLineStrip vertexcount %d", __FUNCTION__, jb->numsystems);
+#endif
+        jb=jb->next;
+      }
+      [renderEncoder popDebugGroup];
+    }
+    
+    
+    if(enabled[FEATURE_JSTARS]) {
+      [renderEncoder pushDebugGroup:@"Journey"];
+
+      simd::float4 colour_jstars;
+      colour_jstars[0]=1.0;
+      colour_jstars[1]=1.0;
+      colour_jstars[2]=1.0;
+      colour_jstars[3]=1.0;
+      
+      // Slightly fuzzy would be nice too...
+      journey_block_t *jb=thisGalaxy->first_journey_block;
+      for (int i = 0; i < thisGalaxy->num_journey_blocks; i++) {
+#ifdef DEBUG_RENDER
+        NSLog(@"%s: %d systems block %d of %d", __FUNCTION__, jb->numsystems, i, thisGalaxy->num_journey_blocks);
+#endif
+        id <MTLBuffer> _vertexBuffer;
+      
+        _vertexBuffer = [_device newBufferWithBytes:jb->systems length:sizeof(JourneyVertex_t)*jb->numsystems options:MTLResourceOptionCPUCacheModeDefault];
+        _vertexBuffer.label = @"Vertices";
+      
+        //  set vertex buffer for each journey segment
+        [renderEncoder setVertexBuffer:_vertexBuffer offset:0 atIndex:0 ];
+        [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
+        [renderEncoder setVertexBytes:&colours[COLOUR_IND_JSTAR] length:sizeof(float4) atIndex:2 ];
+        float starSize=pointsize[POINT_IND_JSTAR]*(model_scale/POINT_SCALE);
+        [renderEncoder setVertexBytes:&starSize length:sizeof(float) atIndex:3 ];
+
+        //[renderEncoder setVertexBytes:&pointsize[POINT_IND_JSTAR] length:sizeof(float) atIndex:3 ];
+
+        // tell the render context we want to draw our primitives
+        [renderEncoder drawPrimitives:MTLPrimitiveTypePoint vertexStart:0 vertexCount:jb->numsystems ];
+#ifdef DEBUG_RENDER
+        NSLog(@"%s: encoded MTLPrimitiveTypeLineStrip vertexcount %d", __FUNCTION__, jb->numsystems);
+#endif
+        jb=jb->next;
+      }
+#endif
+      [renderEncoder popDebugGroup];
+    }
+    
+    
+    if(enabled[FEATURE_STATIONS]) {
+      [renderEncoder pushDebugGroup:@"Stations"];
+      
+      simd::float4 colour_jstars;
+      colour_jstars[0]=1.0;
+      colour_jstars[1]=1.0;
+      colour_jstars[2]=1.0;
+      colour_jstars[3]=1.0;
+//
+      station_block_t *sb=thisGalaxy->first_station_block;
+      for (int i = 0; i < thisGalaxy->num_station_blocks; i++) {
+#ifdef DEBUG_RENDER
+        NSLog(@"%s: %d station block %d of %d", __FUNCTION__, sb->numstations, i, thisGalaxy->num_station_blocks);
+#endif
+        id <MTLBuffer> _vertexBuffer;
+      
+        _vertexBuffer = [_device newBufferWithBytes:sb->stations length:sizeof(StationVertex_t)*sb->numstations options:MTLResourceOptionCPUCacheModeDefault];
+        _vertexBuffer.label = @"Vertices";
+      
+        //  set vertex buffer for each journey segment
+        [renderEncoder setVertexBuffer:_vertexBuffer offset:0 atIndex:0 ];
+        [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
+        [renderEncoder setVertexBytes:&colours[COLOUR_IND_STATION] length:sizeof(float4) atIndex:2 ];
+        //[renderEncoder setVertexBytes:&pointsize[POINT_IND_STATION] length:sizeof(float) atIndex:3 ];
+        float starSize=pointsize[POINT_IND_STATION]*(model_scale/POINT_SCALE);
+        [renderEncoder setVertexBytes:&starSize length:sizeof(float) atIndex:3 ];
+      
+        // tell the render context we want to draw our primitives
+        [renderEncoder drawPrimitives:MTLPrimitiveTypePoint vertexStart:0 vertexCount:sb->numstations ];
+#ifdef DEBUG_RENDER
+        NSLog(@"%s: encoded MTLPrimitiveTypeLineStrip vertexcount %d", __FUNCTION__, sb->numstations);
+#endif
+        sb=sb->next;
+      }
+      [renderEncoder popDebugGroup];
+    }
+  
+  
+  
+  
     [renderEncoder endEncoding];
     [renderEncoder popDebugGroup];
     
@@ -416,6 +584,7 @@ galaxy_t *thisGalaxy;
   
   NSLog(@"%s: (reshaped aspect=%8.4f)", __FUNCTION__, aspect);
   
+
 }
 
 #pragma mark Update
@@ -423,44 +592,28 @@ galaxy_t *thisGalaxy;
 // called every frame
 - (void)updateConstantBuffer {
   
-  float4x4 baseModelViewMatrix = translate(0.0f, 0.0f, 0.0f) * rotate(_rotation, 0.0f, 1.0f, 0.0f);
+  //float4x4 baseModelViewMatrix = translate(0.0f, 0.0f, 0.0f) * rotate(_rotation, 0.0f, 0.0f, 0.0f);
+  float4x4 baseModelViewMatrix = translate(0.0f, 0.0f, 0.0f) ;
   baseModelViewMatrix = _viewMatrix * baseModelViewMatrix;
   
   constants_t *constant_buffer = (constants_t *)[_dynamicConstantBuffer[_constantDataBufferIndex] contents];
   
-  simd::float4x4 modelViewMatrix = AAPL::translate(0.0f, 0.0f, 1.5f) * AAPL::rotate(_rotation, 0.0f, 1.0f, 0.0f);
+  //simd::float4x4 modelViewMatrix = AAPL::translate(0.0f, 0.0f, 1.5f) * AAPL::rotate(_rotation, 0.0f, 1.0f, 0.0f);
+  simd::float4x4 modelViewMatrix = AAPL::translate(kCentre[0], kCentre[1], kCentre[2]) * AAPL::rotate(_rotation, 0.0f, 1.0f, 0.0f) * scale(model_scale, model_scale, model_scale) * AAPL::translate(-kCentre[0], -kCentre[1], -kCentre[2]);
   modelViewMatrix = baseModelViewMatrix * modelViewMatrix;
 
   int i=0;
   
   constant_buffer[i].normal_matrix = inverse(transpose(modelViewMatrix));
   constant_buffer[i].modelview_projection_matrix = _projectionMatrix * modelViewMatrix;
-    
-  // change the color each frame
-  // reverse direction if we've reached a boundary
-  if (constant_buffer[i].ambient_color.y >= 0.8) {
-    constant_buffer[i].multiplier = -1;
-    constant_buffer[i].ambient_color.y = 0.79;
-  } else if (constant_buffer[i].ambient_color.y <= 0.2) {
-    constant_buffer[i].multiplier = 1;
-    constant_buffer[i].ambient_color.y = 0.21;
-  } else {
-    constant_buffer[i].ambient_color.y += constant_buffer[i].multiplier * 0.01*i;
-  }
-#ifdef DEBUG_RENDER
-  NSLog(@"%s: matrix ambient_colour %8.4f rotation %8.4f", __FUNCTION__, constant_buffer[i].ambient_color.y, _rotation);
-#endif
+  
 }
 
 // just use this to update app globals
 - (void)update:(ThreeDMapViewController *)controller {
   _rotation += controller.timeSinceLastDraw * 5.0f;
   
-#if 0
-  if(_rotation>1000.0) {
-    _rotation=0.0;
-  }
-#endif
+
   
 }
 
@@ -471,6 +624,55 @@ galaxy_t *thisGalaxy;
 
 }
 
+- (void)setFeatureEnable:(int)feature enable:(BOOL)enable {
+  if(feature>=MAX_FEATURES) {
+    NSLog(@"%s: feature %d (%s)", __FUNCTION__, feature, "INVALID");
+    return;
+  }
+  NSLog(@"%s: feature %d (%s)", __FUNCTION__, feature, features[feature]);
+  enabled[feature]=enable;
+}
+
+- (void)toggleFeature:(int)feature {
+  if(feature>=MAX_FEATURES) {
+    NSLog(@"%s: feature %d (%s)", __FUNCTION__, feature, "INVALID");
+    return;
+  }
+  NSLog(@"%s: feature %d (%s)", __FUNCTION__, feature, features[feature]);
+  enabled[feature]=!enabled[feature];
+}
+
+- (void)zoom:(float)direction {
+  model_scale+=direction;
+  
+  NSLog(@"%s: scale=%8.4f", __FUNCTION__, model_scale);
+  
+  
+  //[self updateConstantBuffer];
+}
+
+- (BOOL)keyDown:(NSString *)characters {
+  if ([characters isEqual:@"j"]) {
+    // Toggle the journey...
+    [self toggleFeature:FEATURE_JOURNEY];
+    return TRUE;
+  }
+  if ([characters isEqual:@"s"]) {
+    // Toggle the stations...
+    [self toggleFeature:FEATURE_STATIONS];
+    return TRUE;
+  }
+  if ([characters isEqual:@"["]) {
+    [self zoom:0.05];
+    return TRUE;
+  }
+  if ([characters isEqual:@"]"]) {
+    // Toggle the journey...
+    [self zoom:-0.05];
+    return TRUE;
+  }
+  return FALSE;
+}
 
 @end
 

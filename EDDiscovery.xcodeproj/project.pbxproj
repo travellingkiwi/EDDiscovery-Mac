@@ -8,17 +8,13 @@
 
 /* Begin PBXBuildFile section */
 		1C3FA15D1D33CBCA00252B74 /* ThreeDMapView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1C3FA15C1D33CBCA00252B74 /* ThreeDMapView.mm */; };
-		1C3FA15F1D33D1EF00252B74 /* ThreeDMapRenderer.metal in Sources */ = {isa = PBXBuildFile; fileRef = 1C3FA15E1D33D1EF00252B74 /* ThreeDMapRenderer.metal */; };
 		1C3FA1621D33D23B00252B74 /* ThreeDMapRenderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1C3FA1611D33D23B00252B74 /* ThreeDMapRenderer.mm */; };
 		1C3FA1661D346A3F00252B74 /* AAPLTransforms.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1C3FA1651D346A3F00252B74 /* AAPLTransforms.mm */; };
 		1C4344811D36A17000940E8D /* shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 1C4344801D36A17000940E8D /* shaders.metal */; };
+		1C4EE0191D592E28002BDB1A /* backLoader.m in Sources */ = {isa = PBXBuildFile; fileRef = 1C4EE0181D592E28002BDB1A /* backLoader.m */; };
 		1C6ADA521D3523BC004B04A4 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1C6ADA501D3523BC004B04A4 /* Metal.framework */; };
 		1C6ADA531D3523BC004B04A4 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1C6ADA511D3523BC004B04A4 /* MetalKit.framework */; };
 		1CA9FD4F1D32DE8C00A93F60 /* ThreeDMapViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1CA9FD4E1D32DE8C00A93F60 /* ThreeDMapViewController.m */; };
-		1CA9FD521D32DFB000A93F60 /* ThreeDMapAnnotation.m in Sources */ = {isa = PBXBuildFile; fileRef = 1CA9FD511D32DFB000A93F60 /* ThreeDMapAnnotation.m */; };
-		1CA9FD551D32E03100A93F60 /* ThreeDCartographicOverlay.m in Sources */ = {isa = PBXBuildFile; fileRef = 1CA9FD541D32E03100A93F60 /* ThreeDCartographicOverlay.m */; };
-		1CA9FD581D32E0C200A93F60 /* ThreeDCartographicOverlayrenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = 1CA9FD571D32E0C200A93F60 /* ThreeDCartographicOverlayrenderer.m */; };
-		1CA9FD5B1D32E10300A93F60 /* ThreeDBlackTileOverlay.m in Sources */ = {isa = PBXBuildFile; fileRef = 1CA9FD5A1D32E10300A93F60 /* ThreeDBlackTileOverlay.m */; };
 		D903C6F31D3F719D0087BC07 /* NSImage+Tint.m in Sources */ = {isa = PBXBuildFile; fileRef = D903C6F21D3F719D0087BC07 /* NSImage+Tint.m */; };
 		D917A8E81CC672E20087BC07 /* EDSM+CoreDataProperties.m in Sources */ = {isa = PBXBuildFile; fileRef = D917A8E51CC672E20087BC07 /* EDSM+CoreDataProperties.m */; };
 		D917A8E91CC672E20087BC07 /* EDSM.m in Sources */ = {isa = PBXBuildFile; fileRef = D917A8E71CC672E20087BC07 /* EDSM.m */; };
@@ -108,25 +104,18 @@
 /* Begin PBXFileReference section */
 		1C3FA15B1D33CBCA00252B74 /* ThreeDMapView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThreeDMapView.h; sourceTree = "<group>"; };
 		1C3FA15C1D33CBCA00252B74 /* ThreeDMapView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ThreeDMapView.mm; sourceTree = "<group>"; };
-		1C3FA15E1D33D1EF00252B74 /* ThreeDMapRenderer.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = ThreeDMapRenderer.metal; sourceTree = "<group>"; };
 		1C3FA1601D33D23B00252B74 /* ThreeDMapRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThreeDMapRenderer.h; sourceTree = "<group>"; };
 		1C3FA1611D33D23B00252B74 /* ThreeDMapRenderer.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ThreeDMapRenderer.mm; sourceTree = "<group>"; };
 		1C3FA1641D3469EC00252B74 /* AAPLTransforms.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AAPLTransforms.h; sourceTree = "<group>"; };
 		1C3FA1651D346A3F00252B74 /* AAPLTransforms.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AAPLTransforms.mm; sourceTree = "<group>"; };
 		1C4344801D36A17000940E8D /* shaders.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = shaders.metal; sourceTree = "<group>"; };
+		1C4EE0171D592E28002BDB1A /* backLoader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = backLoader.h; sourceTree = "<group>"; };
+		1C4EE0181D592E28002BDB1A /* backLoader.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = backLoader.m; sourceTree = "<group>"; };
 		1C6ADA4F1D35224D004B04A4 /* AAPLSharedTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AAPLSharedTypes.h; sourceTree = "<group>"; };
 		1C6ADA501D3523BC004B04A4 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		1C6ADA511D3523BC004B04A4 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
 		1CA9FD4D1D32DE8C00A93F60 /* ThreeDMapViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThreeDMapViewController.h; sourceTree = "<group>"; };
 		1CA9FD4E1D32DE8C00A93F60 /* ThreeDMapViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ThreeDMapViewController.m; sourceTree = "<group>"; };
-		1CA9FD501D32DFB000A93F60 /* ThreeDMapAnnotation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThreeDMapAnnotation.h; sourceTree = "<group>"; };
-		1CA9FD511D32DFB000A93F60 /* ThreeDMapAnnotation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ThreeDMapAnnotation.m; sourceTree = "<group>"; };
-		1CA9FD531D32E03100A93F60 /* ThreeDCartographicOverlay.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThreeDCartographicOverlay.h; sourceTree = "<group>"; };
-		1CA9FD541D32E03100A93F60 /* ThreeDCartographicOverlay.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ThreeDCartographicOverlay.m; sourceTree = "<group>"; };
-		1CA9FD561D32E0C200A93F60 /* ThreeDCartographicOverlayrenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThreeDCartographicOverlayrenderer.h; sourceTree = "<group>"; };
-		1CA9FD571D32E0C200A93F60 /* ThreeDCartographicOverlayrenderer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ThreeDCartographicOverlayrenderer.m; sourceTree = "<group>"; };
-		1CA9FD591D32E10300A93F60 /* ThreeDBlackTileOverlay.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThreeDBlackTileOverlay.h; sourceTree = "<group>"; };
-		1CA9FD5A1D32E10300A93F60 /* ThreeDBlackTileOverlay.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ThreeDBlackTileOverlay.m; sourceTree = "<group>"; };
 		D903C6F11D3F719D0087BC07 /* NSImage+Tint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSImage+Tint.h"; sourceTree = "<group>"; };
 		D903C6F21D3F719D0087BC07 /* NSImage+Tint.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSImage+Tint.m"; sourceTree = "<group>"; };
 		D903C6F41D3F73280087BC07 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
@@ -281,19 +270,12 @@
 			children = (
 				1C43447F1D36A15D00940E8D /* Resources */,
 				1C3FA1631D3469DB00252B74 /* Math */,
+				1C4EE0171D592E28002BDB1A /* backLoader.h */,
+				1C4EE0181D592E28002BDB1A /* backLoader.m */,
 				1C3FA15B1D33CBCA00252B74 /* ThreeDMapView.h */,
 				1C3FA15C1D33CBCA00252B74 /* ThreeDMapView.mm */,
 				1CA9FD4D1D32DE8C00A93F60 /* ThreeDMapViewController.h */,
 				1CA9FD4E1D32DE8C00A93F60 /* ThreeDMapViewController.m */,
-				1CA9FD501D32DFB000A93F60 /* ThreeDMapAnnotation.h */,
-				1CA9FD511D32DFB000A93F60 /* ThreeDMapAnnotation.m */,
-				1CA9FD531D32E03100A93F60 /* ThreeDCartographicOverlay.h */,
-				1CA9FD541D32E03100A93F60 /* ThreeDCartographicOverlay.m */,
-				1CA9FD561D32E0C200A93F60 /* ThreeDCartographicOverlayrenderer.h */,
-				1CA9FD571D32E0C200A93F60 /* ThreeDCartographicOverlayrenderer.m */,
-				1CA9FD591D32E10300A93F60 /* ThreeDBlackTileOverlay.h */,
-				1CA9FD5A1D32E10300A93F60 /* ThreeDBlackTileOverlay.m */,
-				1C3FA15E1D33D1EF00252B74 /* ThreeDMapRenderer.metal */,
 				1C3FA1601D33D23B00252B74 /* ThreeDMapRenderer.h */,
 				1C3FA1611D33D23B00252B74 /* ThreeDMapRenderer.mm */,
 			);
@@ -706,7 +688,6 @@
 				D91CAA321CD3F8920087BC07 /* SSKeychain.m in Sources */,
 				D9BAB5E31CC0F7D80087BC07 /* TravelHistoryViewController.m in Sources */,
 				D94DE3061CC506990087BC07 /* NetLogParser.m in Sources */,
-				1C3FA15F1D33D1EF00252B74 /* ThreeDMapRenderer.metal in Sources */,
 				D9FF378F1D10C4D90087BC07 /* ScreenshotCollectionViewItem.m in Sources */,
 				D94DE2FE1CC5028B0087BC07 /* Jump.m in Sources */,
 				D93514441CF5220A0087BC07 /* DeleteTableView.m in Sources */,
@@ -723,7 +704,6 @@
 				D94DE2931CC4EA0E0087BC07 /* EDDiscovery.xcdatamodeld in Sources */,
 				D9B5622B1CD787800087BC07 /* TrilaterationViewController.m in Sources */,
 				D95E15131CC42E620087BC07 /* EDSMConnection.m in Sources */,
-				1CA9FD551D32E03100A93F60 /* ThreeDCartographicOverlay.m in Sources */,
 				1C3FA1621D33D23B00252B74 /* ThreeDMapRenderer.mm in Sources */,
 				D9CCCFA51CDBEB160087BC07 /* DistanceNumberFormatter.m in Sources */,
 				D91CAA731CD416F10087BC07 /* Note+CoreDataProperties.m in Sources */,
@@ -737,16 +717,14 @@
 				D960B6791CDFD5A80087BC07 /* LoadingViewController.m in Sources */,
 				D92ED4661CD81C820087BC07 /* SystemData.m in Sources */,
 				D91CAA741CD416F10087BC07 /* Note.m in Sources */,
-				1CA9FD581D32E0C200A93F60 /* ThreeDCartographicOverlayrenderer.m in Sources */,
 				D94DE2FF1CC5028B0087BC07 /* System+CoreDataProperties.m in Sources */,
 				D9841CE61D08C3670087BC07 /* BlackTileOverlay.m in Sources */,
-				1CA9FD521D32DFB000A93F60 /* ThreeDMapAnnotation.m in Sources */,
 				D9AE9B3E1D103D090087BC07 /* ScreenshotMonitor.m in Sources */,
 				D952CAB81CD371BF0087BC07 /* Commander+CoreDataProperties.m in Sources */,
 				D92ED45D1CD811F00087BC07 /* SuggestedReferences.m in Sources */,
 				D92ED4601CD812D20087BC07 /* ReferencesSector.m in Sources */,
 				D920C9E71CCFA42D0087BC07 /* Distance+CoreDataProperties.m in Sources */,
-				1CA9FD5B1D32E10300A93F60 /* ThreeDBlackTileOverlay.m in Sources */,
+				1C4EE0191D592E28002BDB1A /* backLoader.m in Sources */,
 				D94DE3001CC5028B0087BC07 /* System.m in Sources */,
 				1C4344811D36A17000940E8D /* shaders.metal in Sources */,
 				D94DE2FC1CC5028B0087BC07 /* Image.m in Sources */,

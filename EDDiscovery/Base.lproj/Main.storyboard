@@ -779,7 +779,7 @@
                                                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                             <subviews>
                                                                 <tableView verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="sequential" alternatingRowBackgroundColors="YES" emptySelection="NO" autosaveColumns="NO" headerView="eX4-W7-Df1" id="Bam-q7-TPi" customClass="DeleteTableView">
-                                                                    <rect key="frame" x="0.0" y="0.0" width="610" height="402"/>
+                                                                    <rect key="frame" x="0.0" y="0.0" width="610" height="19"/>
                                                                     <autoresizingMask key="autoresizingMask"/>
                                                                     <size key="intercellSpacing" width="3" height="2"/>
                                                                     <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -1153,7 +1153,7 @@
                                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                     <subviews>
                                                         <tableView verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="lastColumnOnly" alternatingRowBackgroundColors="YES" multipleSelection="NO" autosaveColumns="NO" typeSelect="NO" headerView="kPt-6a-8Ml" id="FTN-4D-V9h">
-                                                            <rect key="frame" x="0.0" y="0.0" width="386" height="153"/>
+                                                            <rect key="frame" x="0.0" y="0.0" width="386" height="19"/>
                                                             <autoresizingMask key="autoresizingMask"/>
                                                             <size key="intercellSpacing" width="3" height="2"/>
                                                             <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -1412,7 +1412,7 @@
                         <tabViewItem id="YJu-0l-6R3"/>
                     </tabViewItems>
                     <tabView key="tabView" type="noTabsNoBorder" id="wJI-nj-TVX">
-                        <rect key="frame" x="0.0" y="0.0" width="1033" height="600"/>
+                        <rect key="frame" x="0.0" y="0.0" width="1088" height="600"/>
                         <autoresizingMask key="autoresizingMask"/>
                         <font key="font" metaFont="message"/>
                         <tabViewItems/>
@@ -1427,15 +1427,15 @@
                 </tabViewController>
                 <customObject id="2gd-e7-r6O" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="366.5" y="1066"/>
+            <point key="canvasLocation" x="614" y="979"/>
         </scene>
         <!--3D Map-->
         <scene sceneID="mOg-w6-dK6">
             <objects>
                 <viewController title="3D Map" id="wgN-N3-wKV" customClass="ThreeDMapViewController" sceneMemberID="viewController">
-                    <view key="view" id="rbK-DF-BKr" customClass="ThreeDMapView">
-                        <rect key="frame" x="0.0" y="0.0" width="888" height="584"/>
-                        <autoresizingMask key="autoresizingMask"/>
+                    <view key="view" wantsLayer="YES" id="rbK-DF-BKr" customClass="ThreeDMapView">
+                        <rect key="frame" x="0.0" y="0.0" width="450" height="300"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                     </view>
                 </viewController>
                 <customObject id="mW2-Ml-N7i" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
@@ -1782,7 +1782,7 @@
                                                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                             <subviews>
                                                                 <tableView verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="sequential" alternatingRowBackgroundColors="YES" multipleSelection="NO" autosaveColumns="NO" typeSelect="NO" id="daZ-ik-gAF">
-                                                                    <rect key="frame" x="0.0" y="0.0" width="312" height="474"/>
+                                                                    <rect key="frame" x="0.0" y="0.0" width="312" height="19"/>
                                                                     <autoresizingMask key="autoresizingMask"/>
                                                                     <size key="intercellSpacing" width="3" height="2"/>
                                                                     <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -1815,7 +1815,7 @@
                                                             </subviews>
                                                             <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
                                                         </clipView>
-                                                        <scroller key="horizontalScroller" verticalHuggingPriority="750" doubleValue="0.038461538461538464" horizontal="YES" id="2pG-pN-qX7">
+                                                        <scroller key="horizontalScroller" verticalHuggingPriority="750" horizontal="YES" id="2pG-pN-qX7">
                                                             <rect key="frame" x="1" y="459" width="299" height="16"/>
                                                             <autoresizingMask key="autoresizingMask"/>
                                                         </scroller>
@@ -1988,7 +1988,7 @@
                                                 </collectionView>
                                             </subviews>
                                         </clipView>
-                                        <scroller key="horizontalScroller" verticalHuggingPriority="750" doubleValue="0.031250000000000916" horizontal="YES" id="JdA-be-L76">
+                                        <scroller key="horizontalScroller" verticalHuggingPriority="750" horizontal="YES" id="JdA-be-L76">
                                             <rect key="frame" x="1" y="507" width="1022" height="16"/>
                                             <autoresizingMask key="autoresizingMask"/>
                                         </scroller>

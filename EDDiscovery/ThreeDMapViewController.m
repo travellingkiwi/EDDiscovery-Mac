@@ -2,12 +2,15 @@
 //  3DMapViewController.m
 //  EDDiscovery
 //
-//  Created by thorin on 08/06/16.
-//  Copyright © 2016 Michele Noberasco. All rights reserved.
-//  Converted to 3D by Hamish Marson <hamish@travellingkiwi.com> 10/07/2016
+//  3D Views by Hamish Marson <hamish@travellingkiwi.com> 10/07/2016
+//  Copyright © 2016 Hamish Marson. All rights reserved.
 //
+//  Based on Apple MetalRenderer example
 
-//#import <MapKit/MapKit.h>
+//#import <UIImage.h>
+#import <QuartzCore/CAMetalLayer.h>
+#import <simd/simd.h>
+#include <stdio.h>
 
 #import "ThreeDMapViewController.h"
 #import "Jump.h"
@@ -17,8 +20,10 @@
 #import "CartographicOverlay.h"
 #import "MapAnnotation.h"
 #import "BlackTileOverlay.h"
+#import "ThreeDMapView.h"
+#import "ThreeDMapRenderer.h"
+#import "backLoader.h"
 
-#import <simd/simd.h>
 
 //boundaries of galaxy, in ED coordinate system
 
@@ -27,19 +32,8 @@
 #define MINY -20000
 #define MAXY  70000
 
-
-/*
- Copyright (C) 2015 Apple Inc. All Rights Reserved.
- See LICENSE.txt for this sample’s licensing information
- 
- Abstract:
- View Controller for Metal Sample Code. Maintains a CADisplayLink timer that runs on the main thread and triggers rendering in AAPLView. Provides update callbacks to its delegate on the timer, prior to triggering rendering.
- */
-#import "ThreeDMapViewController.h"
-#import "ThreeDMapView.h"
-#import "ThreeDMapRenderer.h"
-
-#import <QuartzCore/CAMetalLayer.h>
+#define H3D_READ_STATIONS
+#define DRAWGALAXY
 
 @implementation ThreeDMapViewController {
 @private
@@ -57,11 +51,11 @@
   
   // our renderer instance
   ThreeDMapRenderer *_renderer;
-  
-  MKPolyline     *polyline;
-  NSMutableArray *waypoints;
 
   galaxy_t galaxy;
+  
+  backLoader *bload;
+  
 }
 
 - (void)dealloc {
@@ -157,6 +151,8 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
 - (void)viewDidLoad {
   [super viewDidLoad];
   
+  NSLog(@"%s:", __FUNCTION__);
+
   ThreeDMapView *renderView = (ThreeDMapView *)self.view;
   renderView.delegate = _renderer;
   
@@ -173,6 +169,7 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
   
   
   CVDisplayLinkStart(_displayLink);
+  
 }
 
 - (void)viewDidAppear {
@@ -182,7 +179,12 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
   
   [self loadGalaxy];
   
+  
   [NSWorkspace.sharedWorkspace.notificationCenter addObserver:self selector:@selector(loadJumpsAndWaypoints) name:NEW_JUMP_NOTIFICATION object:nil];
+  
+  bload=[backLoader new];
+  
+  [bload startEDDB:&galaxy];
 }
 
 - (void)viewDidDisappear {
@@ -203,45 +205,84 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
   
 }
 
+void downloadStations(void) {
+  NSLog(@"%s:", __FUNCTION__);
+  
+}
+
+text_block_t *createLabel(NSString *text) {
+  unsigned long width, height;
+  
+#if 0
+  UIGraphicsBeginImageContextWithOptions(CGSizeMake(width, height), NO, 0.0);
+  CIImage *blank = UIGraphicsGetImageFromCurrentImageContext();
+  UIGraphicsEndImageContext();
+#endif
+  
+  return NULL;
+}
+
+//
+// All this loading should be done by a thread in the background. So we
+//   a. Update automatically as things go along
+//   b. Don't pause the program to load the humoungous amounts of data
+//
 - (void)loadJumpsAndWaypoints {
   NSArray         *jumps  = [Jump allJumpsOfCommander:Commander.activeCommander];
   journey_block_t *journey=galaxy.first_journey_block;
   
-  if(journey==NULL) {
-    NSLog(@"%s: journey is NULL - allocating %lu bytes for new one", __FUNCTION__, sizeof(journey_block_t));
-  
-    if((journey=calloc(sizeof(journey_block_t), 1))==NULL) {
-      NSLog(@"%s: Unable to calloc %lu Bytes for journey_block_t", __FUNCTION__, sizeof(journey_block_t));
-      exit(-1);
-    }
-    galaxy.first_journey_block=journey;
-    galaxy.last_journey_block=journey;
+  // If the jumps are not null... We need to refresh them...
+  journey_block_t *jb=galaxy.first_journey_block;
+  while(jb!=NULL) {
+    journey_block_t *dj=jb;
+    jb=jb->next;
+    dj->next=NULL;
     
-    galaxy.num_journey_blocks=1;
+    free(dj);
   }
+  galaxy.first_journey_block=NULL;
+  galaxy.last_journey_block=NULL;
   
   JourneyVertex_t *point=NULL;
   for (Jump *jump in jumps) {
     if (jump.system.hasCoordinates) { // && !jump.hidden) {
+      if(journey==NULL) {
+        //NSLog(@"%s: journey is NULL - allocating %lu bytes for new one", __FUNCTION__, sizeof(journey_block_t));
+        
+        if((journey=calloc(sizeof(journey_block_t), 1))==NULL) {
+          NSLog(@"%s: Unable to calloc %lu Bytes for journey_block_t", __FUNCTION__, sizeof(journey_block_t));
+          exit(-1);
+        }
+        
+        journey->prev=galaxy.last_journey_block;
+        journey->next=NULL;
+        if(galaxy.first_journey_block==NULL) {
+          galaxy.first_journey_block=journey;
+        }
+        if(galaxy.last_journey_block!=NULL) {
+          galaxy.last_journey_block->next=journey;
+        }
+        
+        galaxy.last_journey_block=journey;
+        
+        galaxy.num_journey_blocks++;
+      }
+
       point=&journey->systems[journey->numsystems];
       
       point->posx = jump.system.x/LY_2_MTL;
       point->posy = jump.system.y/LY_2_MTL;
       point->posz = jump.system.z/LY_2_MTL;
       
-      // SHould be red?
-      point->colour[0]=0.0f;
-      point->colour[1]=1.0f;
-      point->colour[2]=0.0f;
-      point->colour[3]=1.0f;
-      
-      NSLog(@"%s: Jump Point %d (%8.4f %8.4f %8.4f)", __FUNCTION__, journey->numsystems, point->posx, point->posy, point->posz);
+      NSLog(@"%s: Jump Point %d (%@) BLOCK %d BLI %d (%8.4f %8.4f %8.4f)", __FUNCTION__, galaxy.total_journey_points, jump.system.name, galaxy.num_journey_blocks, galaxy.total_journey_points, point->posx, point->posy, point->posz);
   
-      if(journey->numsystems<JUMPS_PER_BLOCK) {
-        journey->numsystems++;
+      galaxy.total_journey_points++;
+      
+      if(++journey->numsystems >= JUMPS_PER_BLOCK) {
+        journey=journey->next;
       }
     } else {
-      NSLog(@"%s: Jump Point - has no co-ordinates", __FUNCTION__);
+      NSLog(@"%s: Jump Point (%@) - has no co-ordinates", __FUNCTION__, jump.system.name);
     }
   }
   
@@ -249,77 +290,79 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
   [_renderer setPosition:last.system.x/LY_2_MTL y:last.system.y/LY_2_MTL z:last.system.z/LY_2_MTL];
   
   NSLog(@"%s: Finished loading jumps", __FUNCTION__);
-
+  
   // Now load the systems in the galaxy... Hmm... Wonder how long 1000000 vertices take to load...
-#define DRAWGALAXY
 #ifdef DRAWGALAXY
   // To then get all the systems...
   
-  NSLog(@"%s: Loading Galaxy", __FUNCTION__);
+  if(galaxy.first_galaxy_block==NULL) {
+    NSLog(@"%s: Loading Galaxy", __FUNCTION__);
 
-  NSArray *allSystems=[System allSystemsInContext:MAIN_CONTEXT];
-  galaxy_block_t *gb=galaxy.first_galaxy_block;
-  if(gb==NULL) {
-    NSLog(@"%s: gb is NULL - allocating %lu bytes for new one", __FUNCTION__, sizeof(galaxy_block_t));
+    NSArray *allSystems=[System allSystemsInContext:MAIN_CONTEXT];
+    galaxy_block_t *gb=galaxy.first_galaxy_block;
+    if(gb==NULL) {
+      //NSLog(@"%s: gb is NULL - allocating %lu bytes for new one", __FUNCTION__, sizeof(galaxy_block_t));
     
-    if((gb=calloc(sizeof(galaxy_block_t), 1))==NULL) {
-      NSLog(@"%s: Unable to calloc %lu Bytes for galaxy_block_t", __FUNCTION__, sizeof(galaxy_block_t));
-      exit(-1);
+      if((gb=calloc(sizeof(galaxy_block_t), 1))==NULL) {
+        NSLog(@"%s: Unable to calloc %lu Bytes for galaxy_block_t", __FUNCTION__, sizeof(galaxy_block_t));
+        exit(-1);
+      }
+      galaxy.first_galaxy_block=gb;
+      galaxy.last_galaxy_block=gb;
+    
+      galaxy.num_galaxy_blocks=1;
     }
-    galaxy.first_galaxy_block=gb;
-    galaxy.last_galaxy_block=gb;
-    
-    galaxy.num_galaxy_blocks=1;
-  }
-  for (System *system in allSystems) {
-    if(system.hasCoordinates) {
-      if(gb==NULL) {
-        NSLog(@"%s: gb is NULL - allocating %lu bytes for new one", __FUNCTION__, sizeof(galaxy_block_t));
+    for (System *system in allSystems) {
+      if(system.hasCoordinates) {
+        if(gb==NULL) {
+          //NSLog(@"%s: gb is NULL - allocating %lu bytes for new one", __FUNCTION__, sizeof(galaxy_block_t));
         
-        if((gb=calloc(sizeof(galaxy_block_t), 1))==NULL) {
-          NSLog(@"%s: Unable to calloc %lu Bytes for galaxy_block_t", __FUNCTION__, sizeof(galaxy_block_t));
-          exit(-1);
-        }
-        gb->prev=galaxy.last_galaxy_block;
-        gb->next=NULL;
-        if(galaxy.first_galaxy_block==NULL) {
-          galaxy.first_galaxy_block=gb;
-        }
+          if((gb=calloc(sizeof(galaxy_block_t), 1))==NULL) {
+            NSLog(@"%s: Unable to calloc %lu Bytes for galaxy_block_t", __FUNCTION__, sizeof(galaxy_block_t));
+            exit(-1);
+          }
+          gb->prev=galaxy.last_galaxy_block;
+          gb->next=NULL;
+          if(galaxy.first_galaxy_block==NULL) {
+            galaxy.first_galaxy_block=gb;
+          }
         
-        if(galaxy.last_galaxy_block!=NULL) {
-          galaxy.last_galaxy_block->next=gb;
-        }
+          if(galaxy.last_galaxy_block!=NULL) {
+            galaxy.last_galaxy_block->next=gb;
+          }
         
-        galaxy.last_galaxy_block=gb;
+          galaxy.last_galaxy_block=gb;
         
-        galaxy.num_galaxy_blocks++;
+          galaxy.num_galaxy_blocks++;
 
-      }
-      SystemVertex_t *point=&gb->systems[gb->numsystems];
+        }
+        SystemVertex_t *point=&gb->systems[gb->numsystems];
       
-      point->posx = system.x/LY_2_MTL;
-      point->posy = system.y/LY_2_MTL;
-      point->posz = system.z/LY_2_MTL;
+        point->posx = system.x/LY_2_MTL;
+        point->posy = system.y/LY_2_MTL;
+        point->posz = system.z/LY_2_MTL;
+        
+        if((galaxy.total_systems % 100000)==0) {
+          NSLog(@"%s: System %d %@ BLOCK %d SBCOUNT %d (%8.4f %8.4f %8.4f)", __FUNCTION__, galaxy.total_systems, system.name, galaxy.num_galaxy_blocks, gb->numsystems, system.x, system.y, system.z);
+        }
       
-      // Should be yellow?
-      point->colour[0]=0.8f;
-      point->colour[1]=0.8f;
-      point->colour[2]=0.0f;
-      point->colour[3]=0.5f;
+        galaxy.total_systems++;
 
-      if((galaxy.total_systems % 1000)==0) {
-        NSLog(@"%s: System %d %@ BLOCK %d SBCOUNT %d (%8.4f %8.4f %8.4f)", __FUNCTION__, galaxy.total_systems, system.name, galaxy.num_galaxy_blocks, gb->numsystems, system.x, system.y, system.z);
-      }
-      
-      galaxy.total_systems++;
-
-      if(++gb->numsystems >= SYSTEMS_PER_BLOCK) {
-        gb=gb->next;
+        if(++gb->numsystems >= SYSTEMS_PER_BLOCK) {
+          gb=gb->next;
+        }
       }
     }
   }
   NSLog(@"%s: Galaxy Loaded %d systems into %d blocks", __FUNCTION__, galaxy.total_systems, galaxy.num_galaxy_blocks);
 
+  
+  // Download and read the stations.json file from EDDB
+  //downloadStations();
+  //readStations(&galaxy);
+  
+  
+  
 #endif
   [_renderer setVertexBuffer:&galaxy];
 }
@@ -343,9 +386,10 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
     
   });
   
-  //add polyline with CMDR jumps
-  
-  [self loadJumpsAndWaypoints];
+  //add polyline with CMDR jumps.. In background...
+  //dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
+   [self loadJumpsAndWaypoints];
+  //});
 }
 
 
@@ -420,5 +464,7 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
 - (void)willEnterForeground:(NSNotification*)notification {
   [self setPaused:NO];
 }
+
+
 
 @end

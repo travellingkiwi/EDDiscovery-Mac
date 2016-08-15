@@ -1,13 +1,14 @@
-/*
- Copyright (C) 2015 Apple Inc. All Rights Reserved.
- See LICENSE.txt for this sample’s licensing information
- 
- Abstract:
- View for Metal Sample Code. Manages screen drawable framebuffers and expects a delegate to repond to render commands to perform drawing.
- */
+//
+//  ThreeDMapView.mm
+//  EDDiscovery
+//
+//  Created by Hamish Marson on 08/08/2016.
+//  Copyright © 2016 Hamish Marson. All rights reserved.
+//
 
-//#import "ThreeDView.h"
+
 #import "ThreeDMapView.h"
+#import "ThreeDMapRenderer.h"
 
 @implementation ThreeDMapView {
   
@@ -45,8 +46,7 @@
   
   NSLog(@"%s: (%s)", __FUNCTION__, "");
 
-  if(self)
-  {
+  if(self) {
     [self initCommon];
   }
   
@@ -238,6 +238,93 @@
 - (void)viewDidChangeBackingProperties {
   [super viewDidChangeBackingProperties];
   _layerSizeDidUpdate = YES;
+}
+
+#if 0
+-(void)mouseDown:(NSEvent *)event
+{
+  NSPoint clickLocation;
+  BOOL itemHit=NO;
+  
+  // convert the click location into the view coords
+  clickLocation = [self convertPoint:[event locationInWindow]
+                            fromView:nil];
+  
+  // did the click occur in the item?
+  itemHit = [self isPointInItem:clickLocation];
+  
+  // Yes it did, note that we're starting to drag
+  if (itemHit) {
+    // flag the instance variable that indicates
+    // a drag was actually started
+    dragging=YES;
+    
+    // store the starting click location;
+    lastDragLocation=clickLocation;
+    
+    // set the cursor to the closed hand cursor
+    // for the duration of the drag
+    [[NSCursor closedHandCursor] push];
+  }
+}
+
+-(void)mouseDragged:(NSEvent *)event
+{
+  if (dragging) {
+    NSPoint newDragLocation=[self convertPoint:[event locationInWindow]
+                                      fromView:nil];
+    
+    
+    // offset the pill by the change in mouse movement
+    // in the event
+    [self offsetLocationByX:(newDragLocation.x-lastDragLocation.x)
+                       andY:(newDragLocation.y-lastDragLocation.y)];
+    
+    // save the new drag location for the next drag event
+    lastDragLocation=newDragLocation;
+    
+    // support automatic scrolling during a drag
+    // by calling NSView's autoscroll: method
+    [self autoscroll:event];
+  }
+}
+
+-(void)mouseUp:(NSEvent *)event
+{
+  dragging=NO;
+  
+  // finished dragging, restore the cursor
+  [NSCursor pop];
+  
+  // the item has moved, we need to reset our cursor
+  // rectangle
+  [[self window] invalidateCursorRectsForView:self];
+}
+#endif
+
+- (BOOL)acceptsFirstResponder {
+  NSLog(@"%s:", __FUNCTION__);
+  return YES;
+}
+
+// -----------------------------------
+// Handle KeyDown Events
+// -----------------------------------
+- (void)keyDown:(NSEvent *)event {
+  BOOL handled = NO;
+  NSString  *characters;
+ 
+  NSLog(@"%s:", __FUNCTION__);
+
+  // get the pressed key
+  characters = [event charactersIgnoringModifiers];
+  
+  handled=[_delegate keyDown:characters];
+  
+  if (!handled) {
+    NSLog(@"%s: (%@) %u", __FUNCTION__, characters, [event keyCode]);
+    [super keyDown:event];
+  }
 }
 
 @end
