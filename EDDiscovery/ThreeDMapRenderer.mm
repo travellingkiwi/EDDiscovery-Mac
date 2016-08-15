@@ -241,25 +241,6 @@ static BOOL enabled[MAX_FEATURES] = {1, 1, 1};
   
   thisGalaxy=galaxy;
 
-
-}
-
-- (void)setVertexBuffer:(galaxy_t *)galaxy {
-  NSLog(@"%s:", __FUNCTION__);
-
-  // setup the vertex buffers
-  if((galaxy!=nil) && (galaxy->first_journey_block!=nil)) {
-    
-  } else {
-    if(galaxy==nil) {
-      NSLog(@"%s: No jumps (NIL Galaxy)", __FUNCTION__);
-    } else if(galaxy->first_journey_block==nil) {
-      NSLog(@"%s: No jumps (first_journey_block == nil)", __FUNCTION__);
-    } else {
-      NSLog(@"%s: No jumps (first_journey_block->numsystems==0)", __FUNCTION__);
-    }
-  }
-
 }
 
 - (BOOL)preparePipelineState:(ThreeDMapView *)view {

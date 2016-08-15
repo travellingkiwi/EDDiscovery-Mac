@@ -351,16 +351,8 @@ text_block_t *createLabel(NSString *text) {
     }
   }
   NSLog(@"%s: Galaxy Loaded %d systems into %d blocks", __FUNCTION__, galaxy.total_systems, galaxy.num_galaxy_blocks);
-
-  
-  // Download and read the stations.json file from EDDB
-  //downloadStations();
-  //readStations(&galaxy);
-  
-  
   
 #endif
-  [_renderer setVertexBuffer:&galaxy];
 }
 
 
