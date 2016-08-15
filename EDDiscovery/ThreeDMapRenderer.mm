@@ -127,10 +127,6 @@ static const float pointsize[MAX_POINT_SIZES]={1.0, 15.00, 20.000, 15.00};
   id <MTLRenderPipelineState> _pipelineState;
   id <MTLDepthStencilState> _depthState;
 
-  // For clearing the screen
-  id<CAMetalDrawable> _drawable;
-  id<MTLTexture> _texture;
-
   // globals used in update calculation
   float4x4 _projectionMatrix;
   float4x4 _viewMatrix;
@@ -325,21 +321,9 @@ static BOOL enabled[MAX_FEATURES] = {1, 1, 1};
   // create a render command encoder so we can render into something
   MTLRenderPassDescriptor *renderPassDescriptor =view.renderPassDescriptor;
   if (renderPassDescriptor) {
-    
-#if 0
-    // This creates a texture the size of the view... Sets it to black... And draws it (To clear the screen to black).
-    _drawable = view.currentDrawable;
-    _texture = _drawable.texture;
-    
-    renderPassDescriptor.colorAttachments[0].texture = _texture;
-    renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
-    renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
-    renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.1, 0.1, 0.1, 1.0);
-#endif
-    
+
     id <MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
 
-    [renderEncoder pushDebugGroup:@"ClearScreen"];
     [renderEncoder setDepthStencilState:_depthState];
     [renderEncoder setRenderPipelineState:_pipelineState];
  
@@ -583,7 +567,6 @@ static BOOL enabled[MAX_FEATURES] = {1, 1, 1};
   _viewMatrix = lookAt(kEye, kCentre, kUp);
   
   NSLog(@"%s: (reshaped aspect=%8.4f)", __FUNCTION__, aspect);
-  
 
 }
 
