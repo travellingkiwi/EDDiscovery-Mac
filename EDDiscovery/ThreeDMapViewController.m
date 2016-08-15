@@ -179,6 +179,7 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
   
   [self loadGalaxy];
   
+  [_renderer reshape:self.view];
   
   [NSWorkspace.sharedWorkspace.notificationCenter addObserver:self selector:@selector(loadJumpsAndWaypoints) name:NEW_JUMP_NOTIFICATION object:nil];
   
@@ -202,11 +203,6 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
   
   
   
-  
-}
-
-void downloadStations(void) {
-  NSLog(@"%s:", __FUNCTION__);
   
 }
 
