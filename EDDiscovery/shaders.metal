@@ -40,9 +40,10 @@ vertex ColorInOut journey_vertex(device journey_vertex_t* vertex_array [[ buffer
   float4 in_position = float4(float3(vertex_array[vid].position), 1.0);
   out.position = constants.modelview_projection_matrix * in_position;
   out.point_size = *point_size;
+  
   out.color = half4(*colour);
   //out.color = half4(constants.ambient_color + constants.diffuse_color);
-
+  
   return out;
 }
 
@@ -69,5 +70,34 @@ vertex ColorInOut journey_star_vertex(device journey_vertex_t* vertex_array [[ b
 
 // fragment shader function
 fragment half4 journey_star_fragment(ColorInOut in [[stage_in]]) {
+  return in.color;
+}
+
+// vertex shader function
+vertex ColorInOut star_vertex(device journey_vertex_t* vertex_array [[ buffer(0) ]],
+                              constant AAPL::constants_t& constants [[ buffer(1) ]],
+                              constant float4 *colour,
+                              constant float *point_size,
+                              unsigned int vid [[ vertex_id ]]) {
+  ColorInOut out;
+  
+  float4 in_position = float4(float3(vertex_array[vid].position), 1.0);
+  out.position = constants.modelview_projection_matrix * in_position;
+  out.point_size = *point_size;
+
+  // The colour of a star should vary with distance. The furher away, the more diffuse it should be
+  // however it should also combine wth the colours already present so two stars 'close' to each other
+  // will provide for a brighter point
+  // The eye position is in constants.kEye
+  float sep=distance(constants.kCentre, vertex_array[vid].position);
+  
+  out.color = half4((*colour) * (2/sep));
+  //out.color = half4(constants.ambient_color + constants.diffuse_color);
+  
+  return out;
+}
+
+// fragment shader function
+fragment half4 star_fragment(ColorInOut in [[stage_in]]) {
   return in.color;
 }

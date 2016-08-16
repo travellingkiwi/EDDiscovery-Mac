@@ -159,6 +159,11 @@ static BOOL enabled[MAX_FEATURES] = {1, 1, 1};
   kEye[1]=kCentre[1]+(START_EYE_Y/LY_2_MTL);
   kEye[2]=kCentre[2]+(START_EYE_Z/LY_2_MTL);
   
+  for(int i=0; i<kInFlightCommandBuffers; i++) {
+    constants_t *constant_buffer = (constants_t *)[_dynamicConstantBuffer[i] contents];
+    constant_buffer[0].kCentre=kCentre;
+  }
+
   NSLog(@"%s: kCentre set [%8.4f %8.4f %8.4f]", __FUNCTION__, kCentre[0], kCentre[1], kCentre[2]);
   NSLog(@"%s: kEye    set [%8.4f %8.4f %8.4f]", __FUNCTION__, kEye[0], kEye[1], kEye[2]);
   
@@ -255,7 +260,7 @@ static BOOL enabled[MAX_FEATURES] = {1, 1, 1};
   }
   
   // get the vertex function from the library
-  id <MTLFunction> vertexProgram = [_defaultLibrary newFunctionWithName:@"journey_vertex"];
+  id <MTLFunction> vertexProgram = [_defaultLibrary newFunctionWithName:@"star_vertex"];
   if(!vertexProgram) {
     NSLog(@">> ERROR: Couldn't load journey vertex function from default library");
     exit(-1);
@@ -568,7 +573,6 @@ static BOOL enabled[MAX_FEATURES] = {1, 1, 1};
   modelViewMatrix = baseModelViewMatrix * modelViewMatrix;
 
   int i=0;
-  
   constant_buffer[i].normal_matrix = inverse(transpose(modelViewMatrix));
   constant_buffer[i].modelview_projection_matrix = _projectionMatrix * modelViewMatrix;
   

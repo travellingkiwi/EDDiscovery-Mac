@@ -81,7 +81,7 @@
   
   // make sure to clear every frame for best performance
   colorAttachment.loadAction = MTLLoadActionClear;
-  colorAttachment.clearColor = MTLClearColorMake(0.25f, 0.25f, 0.25f, 1.0f);
+  colorAttachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 1.0f);
   
   // if sample count is greater than 1, render into using MSAA, then resolve into our color texture
   if(_sampleCount > 1) {
