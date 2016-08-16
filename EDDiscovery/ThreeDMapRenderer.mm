@@ -194,6 +194,7 @@ static BOOL enabled[MAX_FEATURES] = {1, 1, 1};
   view.sampleCount        = 1;
   
   // create a new command queue
+  // This is only creating one command queue. We should really be creating one per GPU
   _commandQueue = [_device newCommandQueue];
   
   _defaultLibrary = [_device newDefaultLibrary];
@@ -575,7 +576,7 @@ static BOOL enabled[MAX_FEATURES] = {1, 1, 1};
 
 // just use this to update app globals
 - (void)update:(ThreeDMapViewController *)controller {
-  _rotation += controller.timeSinceLastDraw * 5.0f;
+  _rotation += controller.timeSinceLastDraw * 1.0f;
   
 
   

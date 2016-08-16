@@ -131,7 +131,7 @@ typedef struct galaxy_struct {
 
 // load all assets before triggering rendering
 - (void)configure:(ThreeDMapView *)view galaxy:(galaxy_t *)galaxy;
-- (void)setVertexBuffer:(galaxy_t *)galaxy;
+//- (void)setVertexBuffer:(galaxy_t *)galaxy;
 - (void)setPosition:(float)x y:(float)y z:(float)z;
 - (void)setFeatureEnable:(int)feature enable:(BOOL)enable;
 - (void)zoom:(float)direction;
