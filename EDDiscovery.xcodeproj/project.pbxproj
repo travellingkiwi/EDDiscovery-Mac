@@ -268,8 +268,8 @@
 		1CA9FD4B1D32DD8900A93F60 /* 3D Map */ = {
 			isa = PBXGroup;
 			children = (
-				1C43447F1D36A15D00940E8D /* Resources */,
 				1C3FA1631D3469DB00252B74 /* Math */,
+				1C43447F1D36A15D00940E8D /* Resources */,
 				1C4EE0171D592E28002BDB1A /* backLoader.h */,
 				1C4EE0181D592E28002BDB1A /* backLoader.m */,
 				1C3FA15B1D33CBCA00252B74 /* ThreeDMapView.h */,

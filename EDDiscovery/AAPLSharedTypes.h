@@ -21,6 +21,8 @@ namespace AAPL
         simd::float4x4 normal_matrix;
         simd::float4   ambient_color;
         simd::float4   diffuse_color;
+        simd::float3   kCentre;
+      
         int            multiplier;
     } __attribute__ ((aligned (256)));
 }
