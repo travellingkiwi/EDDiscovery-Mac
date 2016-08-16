@@ -241,8 +241,8 @@
 }
 
 #if 0
--(void)mouseDown:(NSEvent *)event
-{
+
+-(void)mouseDown:(NSEvent *)event {
   NSPoint clickLocation;
   BOOL itemHit=NO;
   
@@ -268,8 +268,7 @@
   }
 }
 
--(void)mouseDragged:(NSEvent *)event
-{
+-(void)mouseDragged:(NSEvent *)event {
   if (dragging) {
     NSPoint newDragLocation=[self convertPoint:[event locationInWindow]
                                       fromView:nil];
@@ -289,8 +288,7 @@
   }
 }
 
--(void)mouseUp:(NSEvent *)event
-{
+-(void)mouseUp:(NSEvent *)event {
   dragging=NO;
   
   // finished dragging, restore the cursor

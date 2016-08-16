@@ -579,7 +579,7 @@ static BOOL enabled[MAX_FEATURES] = {1, 1, 1};
 
 // just use this to update app globals
 - (void)update:(ThreeDMapViewController *)controller {
-  _rotation += controller.timeSinceLastDraw * 5.0f;
+  _rotation += controller.timeSinceLastDraw * 1.0f;
   
 
   
