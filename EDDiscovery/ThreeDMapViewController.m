@@ -175,6 +175,8 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
 - (void)viewDidAppear {
   [super viewDidAppear];
   
+  NSLog(@"%s:", __FUNCTION__);
+
   [Answers logCustomEventWithName:@"Screen view" customAttributes:@{@"screen":NSStringFromClass(self.class)}];
   
   [self loadGalaxy];
@@ -183,14 +185,22 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
   
   [NSWorkspace.sharedWorkspace.notificationCenter addObserver:self selector:@selector(loadJumpsAndWaypoints) name:NEW_JUMP_NOTIFICATION object:nil];
   
-  bload=[backLoader new];
+  static dispatch_once_t onceToken;
   
-  [bload startEDDB:&galaxy];
+  dispatch_once(&onceToken, ^{
+
+    bload=[backLoader new];
+  
+    [bload startEDDB:&galaxy];
+  });
+
 }
 
 - (void)viewDidDisappear {
   [super viewDidDisappear];
   
+  NSLog(@"%s:", __FUNCTION__);
+
   [NSWorkspace.sharedWorkspace.notificationCenter removeObserver:self name:NEW_JUMP_NOTIFICATION object:nil];
 }
 
@@ -372,12 +382,10 @@ text_block_t *createLabel(NSString *text) {
     
     // Preload the known galaxy into a structure that we can render...
     
+    [self loadJumpsAndWaypoints];
+
   });
   
-  //add polyline with CMDR jumps.. In background...
-  //dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
-   [self loadJumpsAndWaypoints];
-  //});
 }
 
 
@@ -412,6 +420,8 @@ text_block_t *createLabel(NSString *text) {
 
 - (void)stopGameLoop {
   if(_displayLink) {
+    NSLog(@"%s:", __FUNCTION__);
+
     // Stop the display link BEFORE releasing anything in the view
     // otherwise the display link thread may call into the view and crash
     // when it encounters something that has been release
@@ -424,14 +434,15 @@ text_block_t *createLabel(NSString *text) {
 }
 
 - (void)setPaused:(BOOL)pause {
+  NSLog(@"%s:", __FUNCTION__);
+
   if(_gameLoopPaused == pause) {
     return;
   }
   
   if(_displayLink) {
     // inform the delegate we are about to pause
-    [_delegate viewController:self
-                    willPause:pause];
+    [_delegate viewController:self willPause:pause];
     
     if(pause) {
       CVDisplayLinkStop(_displayLink);
@@ -442,14 +453,20 @@ text_block_t *createLabel(NSString *text) {
 }
 
 - (BOOL)isPaused {
+  NSLog(@"%s:", __FUNCTION__);
+  
   return _gameLoopPaused;
 }
 
 - (void)didEnterBackground:(NSNotification*)notification {
+  NSLog(@"%s:", __FUNCTION__);
+  
   [self setPaused:YES];
 }
 
 - (void)willEnterForeground:(NSNotification*)notification {
+  NSLog(@"%s:", __FUNCTION__);
+
   [self setPaused:NO];
 }
 

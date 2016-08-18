@@ -32,8 +32,16 @@
   self.wantsLayer = YES;
   self.layer = _metalLayer = [CAMetalLayer layer];
   
-  _device = MTLCreateSystemDefaultDevice();
   
+  NSArray *devarray = MTLCopyAllDevices();
+  for (id devi in devarray) {
+    NSLog(@"%s: device: %@", __FUNCTION__, [devi name]);
+  }
+
+  _device = MTLCreateSystemDefaultDevice();
+
+  NSLog(@"%s: got default device %@", __FUNCTION__, [_device name]);
+
   _metalLayer.device          = _device;
   _metalLayer.pixelFormat     = MTLPixelFormatBGRA8Unorm;
   
@@ -241,8 +249,8 @@
 }
 
 #if 0
--(void)mouseDown:(NSEvent *)event
-{
+
+-(void)mouseDown:(NSEvent *)event {
   NSPoint clickLocation;
   BOOL itemHit=NO;
   
@@ -268,8 +276,7 @@
   }
 }
 
--(void)mouseDragged:(NSEvent *)event
-{
+-(void)mouseDragged:(NSEvent *)event {
   if (dragging) {
     NSPoint newDragLocation=[self convertPoint:[event locationInWindow]
                                       fromView:nil];
@@ -289,8 +296,7 @@
   }
 }
 
--(void)mouseUp:(NSEvent *)event
-{
+-(void)mouseUp:(NSEvent *)event {
   dragging=NO;
   
   // finished dragging, restore the cursor
