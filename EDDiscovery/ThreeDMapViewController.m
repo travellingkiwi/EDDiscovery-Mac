@@ -209,6 +209,7 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
 
 - (void)loadCoordinateSystem {
   //determine boundaries of map view, in map view coordinate format
+    NSLog(@"%s:", __FUNCTION__);
 
   
   
@@ -218,7 +219,8 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
 
 text_block_t *createLabel(NSString *text) {
   unsigned long width, height;
-  
+  NSLog(@"%s:", __FUNCTION__);
+
 #if 0
   UIGraphicsBeginImageContextWithOptions(CGSizeMake(width, height), NO, 0.0);
   CIImage *blank = UIGraphicsGetImageFromCurrentImageContext();
@@ -234,9 +236,22 @@ text_block_t *createLabel(NSString *text) {
 //   b. Don't pause the program to load the humoungous amounts of data
 //
 - (void)loadJumpsAndWaypoints {
-  NSArray         *jumps  = [Jump allJumpsOfCommander:Commander.activeCommander];
+    
+  // For some reason these calls can't be made in anything otther than the Main Thread...
+  // Yet other calls (e.g. to get the jumps) can be made in a background thread...
+  //   But when they are, they pause the main thread...
+    
+  NSArray  *jumps = [Jump allJumpsOfCommander:Commander.activeCommander];
+    
+  Jump *last=[Jump lastXYZJumpOfCommander:Commander.activeCommander];
+  [_renderer setPosition:last.system.x/LY_2_MTL y:last.system.y/LY_2_MTL z:last.system.z/LY_2_MTL];
+    
+  dispatch_async(dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0), ^{
+      
   journey_block_t *journey=galaxy.first_journey_block;
   
+  NSLog(@"%s:", __FUNCTION__);
+
   // If the jumps are not null... We need to refresh them...
   journey_block_t *jb=galaxy.first_journey_block;
   while(jb!=NULL) {
@@ -292,11 +307,12 @@ text_block_t *createLabel(NSString *text) {
     }
   }
   
-  Jump *last=[Jump lastXYZJumpOfCommander:Commander.activeCommander];
-  [_renderer setPosition:last.system.x/LY_2_MTL y:last.system.y/LY_2_MTL z:last.system.z/LY_2_MTL];
   
   NSLog(@"%s: Finished loading jumps", __FUNCTION__);
-  
+  });
+
+  dispatch_async(dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0), ^{
+
   // Now load the systems in the galaxy... Hmm... Wonder how long 1000000 vertices take to load...
 #ifdef DRAWGALAXY
   // To then get all the systems...
@@ -361,7 +377,9 @@ text_block_t *createLabel(NSString *text) {
     }
   }
   NSLog(@"%s: Galaxy Loaded %d systems into %d blocks", __FUNCTION__, galaxy.total_systems, galaxy.num_galaxy_blocks);
-  
+      
+  });
+    
 #endif
 }
 
@@ -373,17 +391,16 @@ text_block_t *createLabel(NSString *text) {
   static dispatch_once_t onceToken;
   
   dispatch_once(&onceToken, ^{
-    
-    NSLog(@"%s: (%s)", __FUNCTION__, "Loading the galaxy");
+ 
+      NSLog(@"%s: (%s)", __FUNCTION__, "Loading the galaxy");
 
-    //calculate ED coordinate system
+      // calculate ED coordinate system
     
-    [self loadCoordinateSystem];
+      [self loadCoordinateSystem];
     
-    // Preload the known galaxy into a structure that we can render...
+      // Preload the known galaxy into a structure that we can render...
     
-    [self loadJumpsAndWaypoints];
-
+      [self loadJumpsAndWaypoints];
   });
   
 }

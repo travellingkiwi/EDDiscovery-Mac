@@ -14,7 +14,7 @@
   },
   "DVTSourceControlWorkspaceBlueprintIdentifierKey" : "E4248088-D2F7-48DC-B5F5-6241A8BBBEC7",
   "DVTSourceControlWorkspaceBlueprintWorkingCopyPathsKey" : {
-    "81D41A47930DCC0CB9E68809D132336D39C4A367" : "EDDiscovery\/",
+    "81D41A47930DCC0CB9E68809D132336D39C4A367" : "EDDiscovery-Mac\/",
     "F73223046C8E5C3811CC17CF11D424D8F73BA066" : "..\/iOS\/libraries\/MHWDirectoryWatcher",
     "e58345e8-c12f-4b11-b155-ba26903eb9fd++3031" : "..\/iOS\/libraries"
   },
