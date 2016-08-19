@@ -17,6 +17,7 @@
 
 #import "Jump.h"
 
+
 using namespace AAPL;
 using namespace simd;
 
@@ -146,6 +147,50 @@ static char *features[MAX_FEATURES] = {
 };
 
 static BOOL enabled[MAX_FEATURES] = {1, 1, 1};
+
+#if 0
+//
+// This render_text is based on the openGL code from https://en.wikibooks.org/wiki/OpenGL_Programming/Modern_OpenGL_Tutorial_Text_Rendering_01
+//
+void render_text(const char *text, float x, float y, float sx, float sy) {
+  const char *p;
+  
+  for(p = text; *p; p++) {
+    if(FT_Load_Char(face, *p, FT_LOAD_RENDER))
+      continue;
+    
+    glTexImage2D(
+                 GL_TEXTURE_2D,
+                 0,
+                 GL_RED,
+                 g->bitmap.width,
+                 g->bitmap.rows,
+                 0,
+                 GL_RED,
+                 GL_UNSIGNED_BYTE,
+                 g->bitmap.buffer
+                 );
+    
+    float x2 = x + g->bitmap_left * sx;
+    float y2 = -y - g->bitmap_top * sy;
+    float w = g->bitmap.width * sx;
+    float h = g->bitmap.rows * sy;
+    
+    GLfloat box[4][4] = {
+      {x2,     -y2    , 0, 0},
+      {x2 + w, -y2    , 1, 0},
+      {x2,     -y2 - h, 0, 1},
+      {x2 + w, -y2 - h, 1, 1},
+    };
+    
+    glBufferData(GL_ARRAY_BUFFER, sizeof box, box, GL_DYNAMIC_DRAW);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    
+    x += (g->advance.x/64) * sx;
+    y += (g->advance.y/64) * sy;
+  }
+}
+#endif
 
 - (void)setPosition:(float)x y:(float)y z:(float)z  {
   kCentre[0]=x;
@@ -373,7 +418,7 @@ static BOOL enabled[MAX_FEATURES] = {1, 1, 1};
     colour_systems[3]=1.0;
     
     galaxy_block_t *gb=thisGalaxy->first_galaxy_block;
-    for (int i = 0; i < thisGalaxy->num_galaxy_blocks; i++) {
+    while (gb!=NULL) {
 #ifdef DEBUG_RENDER
       NSLog(@"%s: %d galaxy block %d of %d", __FUNCTION__, gb->numsystems, i, thisGalaxy->num_galaxy_blocks);
 #endif
@@ -390,8 +435,15 @@ static BOOL enabled[MAX_FEATURES] = {1, 1, 1};
       float starSize=pointsize[POINT_IND_DEFAULT]*(model_scale/POINT_SCALE);
       [renderEncoder setVertexBytes:&starSize length:sizeof(float) atIndex:3 ];
 
+#if 0
       // tell the render context we want to draw our primitives
-      [renderEncoder drawPrimitives:MTLPrimitiveTypePoint vertexStart:0 vertexCount:gb->numsystems];
+      if (starSize>10.0) {
+        [renderEncoder drawPrimitives:MTLPr vertexStart:0 vertexCount:gb->numsystems];
+
+      } else {
+#endif
+        [renderEncoder drawPrimitives:MTLPrimitiveTypePoint vertexStart:0 vertexCount:gb->numsystems];
+      
 #ifdef DEBUG_RENDER
       NSLog(@"%s: encoded MTLPrimitiveTypePoint vertexcount %d", __FUNCTION__, gb->numsystems);
 #endif
@@ -402,7 +454,6 @@ static BOOL enabled[MAX_FEATURES] = {1, 1, 1};
     
 #endif
     
-#ifdef DRAWJOURNEY
     if(enabled[FEATURE_JOURNEY]) {
       [renderEncoder pushDebugGroup:@"Journey"];
 
@@ -413,10 +464,7 @@ static BOOL enabled[MAX_FEATURES] = {1, 1, 1};
       colour_journey[3]=1.0;
     
       journey_block_t *jb=thisGalaxy->first_journey_block;
-      for (int i = 0; i < thisGalaxy->num_journey_blocks; i++) {
-#ifdef DEBUG_RENDER
-        NSLog(@"%s: %d systems block %d of %d", __FUNCTION__, jb->numsystems, i, thisGalaxy->num_journey_blocks);
-#endif
+      while (jb!=NULL) {
         id <MTLBuffer> _vertexBuffer;
       
         _vertexBuffer = [_device newBufferWithBytes:jb->systems length:sizeof(JourneyVertex_t)*jb->numsystems options:MTLResourceOptionCPUCacheModeDefault];
@@ -431,9 +479,7 @@ static BOOL enabled[MAX_FEATURES] = {1, 1, 1};
 
         // tell the render context we want to draw our primitives
         [renderEncoder drawPrimitives:MTLPrimitiveTypeLineStrip vertexStart:0 vertexCount:jb->numsystems ];
-#ifdef DEBUG_RENDER
-        NSLog(@"%s: encoded MTLPrimitiveTypeLineStrip vertexcount %d", __FUNCTION__, jb->numsystems);
-#endif
+
         jb=jb->next;
       }
       [renderEncoder popDebugGroup];
@@ -451,10 +497,7 @@ static BOOL enabled[MAX_FEATURES] = {1, 1, 1};
       
       // Slightly fuzzy would be nice too...
       journey_block_t *jb=thisGalaxy->first_journey_block;
-      for (int i = 0; i < thisGalaxy->num_journey_blocks; i++) {
-#ifdef DEBUG_RENDER
-        NSLog(@"%s: %d systems block %d of %d", __FUNCTION__, jb->numsystems, i, thisGalaxy->num_journey_blocks);
-#endif
+      while (jb!=NULL) {
         id <MTLBuffer> _vertexBuffer;
       
         _vertexBuffer = [_device newBufferWithBytes:jb->systems length:sizeof(JourneyVertex_t)*jb->numsystems options:MTLResourceOptionCPUCacheModeDefault];
@@ -471,12 +514,9 @@ static BOOL enabled[MAX_FEATURES] = {1, 1, 1};
 
         // tell the render context we want to draw our primitives
         [renderEncoder drawPrimitives:MTLPrimitiveTypePoint vertexStart:0 vertexCount:jb->numsystems ];
-#ifdef DEBUG_RENDER
-        NSLog(@"%s: encoded MTLPrimitiveTypeLineStrip vertexcount %d", __FUNCTION__, jb->numsystems);
-#endif
+
         jb=jb->next;
       }
-#endif
       [renderEncoder popDebugGroup];
     }
     
@@ -491,10 +531,7 @@ static BOOL enabled[MAX_FEATURES] = {1, 1, 1};
       colour_jstars[3]=1.0;
 //
       station_block_t *sb=thisGalaxy->first_station_block;
-      for (int i = 0; i < thisGalaxy->num_station_blocks; i++) {
-#ifdef DEBUG_RENDER
-        NSLog(@"%s: %d station block %d of %d", __FUNCTION__, sb->numstations, i, thisGalaxy->num_station_blocks);
-#endif
+      while(sb!=NULL) {
         id <MTLBuffer> _vertexBuffer;
       
         _vertexBuffer = [_device newBufferWithBytes:sb->stations length:sizeof(StationVertex_t)*sb->numstations options:MTLResourceOptionCPUCacheModeDefault];
@@ -510,9 +547,7 @@ static BOOL enabled[MAX_FEATURES] = {1, 1, 1};
       
         // tell the render context we want to draw our primitives
         [renderEncoder drawPrimitives:MTLPrimitiveTypePoint vertexStart:0 vertexCount:sb->numstations ];
-#ifdef DEBUG_RENDER
-        NSLog(@"%s: encoded MTLPrimitiveTypeLineStrip vertexcount %d", __FUNCTION__, sb->numstations);
-#endif
+
         sb=sb->next;
       }
       [renderEncoder popDebugGroup];

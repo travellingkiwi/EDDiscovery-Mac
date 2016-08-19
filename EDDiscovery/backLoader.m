@@ -82,7 +82,7 @@
     case DOWNLOAD_SYSTEMS : {
       NSLog(@"%s: DOWNLOAD_SYSTEMS completed - starting processing", __FUNCTION__);
       // We've recieved all the data we were expecting... So now kick off a thread in the background to load it...
-      dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
+      dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
         NSError *jsonParsingError = nil;
         NSArray *publicTimeline = [NSJSONSerialization JSONObjectWithData:recvData options:0 error:&jsonParsingError];
         

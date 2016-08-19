@@ -100,12 +100,13 @@ typedef struct galaxy_struct {
   // The main data
   uint num_galaxy_blocks;
   uint total_systems;
-  
+  uint total_journey_points;
+  uint total_stations;
+
   galaxy_block_t *first_galaxy_block;
   galaxy_block_t *last_galaxy_block;
 
   uint num_journey_blocks;
-  uint total_journey_points;
 
   
   journey_block_t *first_journey_block;
@@ -114,7 +115,6 @@ typedef struct galaxy_struct {
   SystemVertex_t   closest[MAX_CLOSEST];
   
   uint num_station_blocks;
-  uint total_stations;
   
   station_block_t *first_station_block;
   station_block_t *last_station_block;
