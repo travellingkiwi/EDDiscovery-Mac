@@ -116,7 +116,7 @@ vertex ColorInOut galaxy_star_vertex(device journey_vertex_t* vertex_array [[ bu
   // The eye position is in constants.kEye
   float sep=distance(constants.kCentre, vertex_array[vid].position);
   
-  out.color = half4((*colour) * (2/sep));
+  out.color = half4((*colour) * (4/sep));
   //out.color = half4(constants.ambient_color + constants.diffuse_color);
   
   return out;
