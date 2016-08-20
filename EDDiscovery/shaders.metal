@@ -30,7 +30,31 @@ struct ColorInOut {
 };
 
 // vertex shader function
-vertex ColorInOut journey_vertex(device journey_vertex_t* vertex_array [[ buffer(0) ]],
+vertex ColorInOut simple_line_vertex(device journey_vertex_t* vertex_array [[ buffer(0) ]],
+                                      constant AAPL::constants_t& constants [[ buffer(1) ]],
+                                      constant float4 *colour,
+                                      constant float *point_size,
+                                      unsigned int vid [[ vertex_id ]]) {
+  ColorInOut out;
+  
+  float4 in_position = float4(float3(vertex_array[vid].position), 1.0);
+  out.position = constants.modelview_projection_matrix * in_position;
+  out.point_size = *point_size;
+  
+  out.color = half4(*colour);
+  //out.color = half4(constants.ambient_color + constants.diffuse_color);
+  
+  return out;
+}
+
+// fragment shader function
+fragment half4 simple_line_frag(ColorInOut in [[stage_in]]) {
+  return in.color;
+};
+
+
+// vertex shader function
+vertex ColorInOut journey_path_vertex(device journey_vertex_t* vertex_array [[ buffer(0) ]],
                                  constant AAPL::constants_t& constants [[ buffer(1) ]],
                                  constant float4 *colour,
                                  constant float *point_size,
@@ -48,33 +72,34 @@ vertex ColorInOut journey_vertex(device journey_vertex_t* vertex_array [[ buffer
 }
 
 // fragment shader function
-fragment half4 journey_fragment(ColorInOut in [[stage_in]]) {
+fragment half4 journey_path_frag(ColorInOut in [[stage_in]]) {
   return in.color;
 };
 
 // vertex shader function
 vertex ColorInOut journey_star_vertex(device journey_vertex_t* vertex_array [[ buffer(0) ]],
                                      constant AAPL::constants_t& constants [[ buffer(1) ]],
-                                     device float4 *colour,
-                                     device float *point_size,
+                                     constant float4 *colour,
+                                     constant float *point_size,
                                      unsigned int vid [[ vertex_id ]]) {
   ColorInOut out;
   
   float4 in_position = float4(float3(vertex_array[vid].position), 1.0);
   out.position = constants.modelview_projection_matrix * in_position;
-  
-  //out.color =  half4(vertex_array[vid].colour);
+  out.point_size = *point_size;
+
+  out.color =  half4(*colour);
   
   return out;
 }
 
 // fragment shader function
-fragment half4 journey_star_fragment(ColorInOut in [[stage_in]]) {
+fragment half4 journey_star_frag(ColorInOut in [[stage_in]]) {
   return in.color;
 }
 
 // vertex shader function
-vertex ColorInOut star_vertex(device journey_vertex_t* vertex_array [[ buffer(0) ]],
+vertex ColorInOut galaxy_star_vertex(device journey_vertex_t* vertex_array [[ buffer(0) ]],
                               constant AAPL::constants_t& constants [[ buffer(1) ]],
                               constant float4 *colour,
                               constant float *point_size,
@@ -98,6 +123,6 @@ vertex ColorInOut star_vertex(device journey_vertex_t* vertex_array [[ buffer(0)
 }
 
 // fragment shader function
-fragment half4 star_fragment(ColorInOut in [[stage_in]]) {
+fragment half4 galaxy_star_frag(ColorInOut in [[stage_in]]) {
   return in.color;
 }

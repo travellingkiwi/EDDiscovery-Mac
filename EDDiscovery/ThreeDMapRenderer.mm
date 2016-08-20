@@ -116,16 +116,41 @@ static const float4 colours[MAX_COLOUR_INDEX]= {
 
 static const float pointsize[MAX_POINT_SIZES]={1.0, 15.00, 20.000, 15.00};
 
+#define MTL_PIPE_SIMPLELINE   0        // Simple lines - e.g. the Axes of interest
+#define MTL_PIPE_GALAXY_STAR  1        // Draws the stars in the galaxy...
+#define MTL_PIPE_JOURNEY_STAR 2        // Draws the stars that we've journeyed to
+#define MTL_PIPE_JOURNEY      3        // Draws the journey itself
+#define MTL_PIPE_STATION      4        // Draws the journey itself
+
+#define MTL_PIPE_COUNT        5        // Number of metal pipelines to have defined
+
+typedef struct mtl_pipe_s {
+  const char *name;
+  const char *vertex_prog_name;
+  const char *fragmt_prog_name;
+  id vertex_prog;
+  id fragmt_prog;
+} mtl_pipe_t;
+
+static const mtl_pipe_t mtl_pipe[MTL_PIPE_COUNT]={
+  {"Simple Line", "simple_line_vertex", "simple_line_frag", NULL, NULL},
+  {"Galaxy Star", "galaxy_star_vertex", "galaxy_star_frag", NULL, NULL},
+  {"Journey Star", "journey_star_vertex", "journey_star_frag", NULL, NULL},
+  {"Journey Path", "journey_path_vertex", "journey_star_frag", NULL, NULL},
+  {"Station", "galaxy_star_vertex", "galaxy_star_frag", NULL, NULL},
+  
+};
+
 @implementation ThreeDMapRenderer {
   // constant synchronization for buffering <kInFlightCommandBuffers> frames
   dispatch_semaphore_t _inflight_semaphore;
   id <MTLBuffer> _dynamicConstantBuffer[kInFlightCommandBuffers];
   
-  // renderer global ivars
+  // renderer global ivars..
   id <MTLDevice> _device;
   id <MTLCommandQueue> _commandQueue;
   id <MTLLibrary> _defaultLibrary;
-  id <MTLRenderPipelineState> _pipelineState;
+  id <MTLRenderPipelineState> _pipelineState[MTL_PIPE_COUNT];
   id <MTLDepthStencilState> _depthState;
 
   // globals used in update calculation
@@ -142,7 +167,7 @@ static const float pointsize[MAX_POINT_SIZES]={1.0, 15.00, 20.000, 15.00};
   
 }
 
-static char *features[MAX_FEATURES] = {
+static const char *features[MAX_FEATURES] = {
   "Journey", "JStars", "Stations",
 };
 
@@ -297,6 +322,7 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
 - (BOOL)preparePipelineState:(ThreeDMapView *)view {
   NSLog(@"%s: (%s)", __FUNCTION__, "PREPARING PIPELINE");
 
+#if 0
   // get the fragment function from the library
   id <MTLFunction> fragmentProgram = [_defaultLibrary newFunctionWithName:@"journey_fragment"];
   if(!fragmentProgram) {
@@ -329,7 +355,40 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
     NSLog(@">> ERROR: Failed Aquiring pipeline state: %@", error);
     return NO;
   }
-  
+#endif
+  for (int i=0; i<MTL_PIPE_COUNT; i++) {
+    id <MTLFunction> vertexProgram=[_defaultLibrary newFunctionWithName:[NSString stringWithUTF8String:mtl_pipe[i].vertex_prog_name]];
+    if(!vertexProgram) {
+      NSLog(@"%s: >> ERROR: Couldn't load vertex function %s from default library", __FUNCTION__, mtl_pipe[i].vertex_prog_name);
+      exit(-1);
+    }
+    // get the vertex function from the library
+    id <MTLFunction> fragmentProgram = [_defaultLibrary newFunctionWithName:[NSString stringWithUTF8String:mtl_pipe[i].fragmt_prog_name]];
+    if(!fragmentProgram) {
+      NSLog(@"%s: >> ERROR: Couldn't load fragment function %s from default library", __FUNCTION__, mtl_pipe[i].fragmt_prog_name);
+      exit(-1);
+    }
+    // create a pipeline state descriptor which can be used to create a compiled pipeline state object
+    MTLRenderPipelineDescriptor *pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
+    
+    pipelineStateDescriptor.label                           = @"MyPipeline";
+    pipelineStateDescriptor.sampleCount                     = view.sampleCount;
+    pipelineStateDescriptor.vertexFunction                  = vertexProgram;
+    pipelineStateDescriptor.fragmentFunction                = fragmentProgram;
+    pipelineStateDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+    pipelineStateDescriptor.depthAttachmentPixelFormat      = view.depthPixelFormat;
+    
+    // create a compiled pipeline state object. Shader functions (from the render pipeline descriptor)
+    // are compiled when this is created unlessed they are obtained from the device's cache
+    NSError *error = nil;
+    _pipelineState[i] = [_device newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
+    if(!_pipelineState[i]) {
+      NSLog(@"%s: >> ERROR: Failed Aquiring pipeline state: %@", __FUNCTION__, error);
+      return NO;
+    }
+
+
+  }
   return YES;
 }
 
@@ -350,223 +409,259 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   // create a new command buffer for each renderpass to the current drawable
   id <MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
   
-  // create a render command encoder so we can render into something
+  // create the render command encoders so we can render into something
   MTLRenderPassDescriptor *renderPassDescriptor =view.renderPassDescriptor;
-  if (renderPassDescriptor) {
+  
+  id <MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
 
-    id <MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-
-    [renderEncoder setDepthStencilState:_depthState];
-    [renderEncoder setRenderPipelineState:_pipelineState];
- 
+  //renderEncoder=[commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+  [renderEncoder setDepthStencilState:_depthState];
+  [renderEncoder setRenderPipelineState:_pipelineState[MTL_PIPE_SIMPLELINE]];
+  
 #ifdef DRAWAXES
-    // Draw the axes....
-    [renderEncoder pushDebugGroup:@"Axes"];
+  // Draw the axes....
+  [renderEncoder pushDebugGroup:@"Axes"];
 
-    simd::float4 axes_colour_sol;
-    axes_colour_sol[0]=1.0;
-    axes_colour_sol[1]=0.0;
-    axes_colour_sol[2]=0.0;
-    axes_colour_sol[3]=1.0;
-    
-    id <MTLBuffer> _sol_axesBuffer;
-    _sol_axesBuffer = [_device newBufferWithBytes:sol_axes length:sizeof(float)*42 options:MTLResourceOptionCPUCacheModeDefault];
-    _sol_axesBuffer.label = @"SolAxes";
-    
-    //  set vertex buffer for each journey segment
-    [renderEncoder setVertexBuffer:_sol_axesBuffer offset:0 atIndex:0 ];
-    [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
-    [renderEncoder setVertexBytes:&colours[COLOUR_IND_AXES_SOL] length:sizeof(float4) atIndex:2 ];
-    [renderEncoder setVertexBytes:&pointsize[POINT_IND_DEFAULT] length:sizeof(float) atIndex:3 ];
-    
-    [renderEncoder drawPrimitives:MTLPrimitiveTypeLine vertexStart:0 vertexCount:6];
-#ifdef DEBUG_RENDER
-    NSLog(@"%s: encoded Sol Axes MTLPrimitiveTypeLine vertexcount %d", __FUNCTION__, 6);
+#if 0
+  simd::float4 axes_colour_sol;
+  axes_colour_sol[0]=1.0;
+  axes_colour_sol[1]=0.0;
+  axes_colour_sol[2]=0.0;
+  axes_colour_sol[3]=1.0;
 #endif
+  
+  id <MTLBuffer> _sol_axesBuffer;
+  _sol_axesBuffer = [_device newBufferWithBytes:sol_axes length:sizeof(float)*42 options:MTLResourceOptionCPUCacheModeDefault];
+  _sol_axesBuffer.label = @"SolAxes";
     
-    simd::float4 axes_colour_saga;
-    axes_colour_saga[0]=0.0;
-    axes_colour_saga[1]=0.0;
-    axes_colour_saga[2]=1.0;
-    axes_colour_saga[3]=1.0;
+  //  set vertex buffer for each journey segment
+  [renderEncoder setVertexBuffer:_sol_axesBuffer offset:0 atIndex:0 ];
+  [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
+  [renderEncoder setVertexBytes:&colours[COLOUR_IND_AXES_SOL] length:sizeof(float4) atIndex:2 ];
+  [renderEncoder setVertexBytes:&pointsize[POINT_IND_DEFAULT] length:sizeof(float) atIndex:3 ];
     
-    id <MTLBuffer> _gal_axesBuffer;
-    _gal_axesBuffer = [_device newBufferWithBytes:gal_axes length:sizeof(float)*42 options:MTLResourceOptionCPUCacheModeDefault];
-    _gal_axesBuffer.label = @"GalAxes";
-    
-    //  set vertex buffer for each journey segment
-    [renderEncoder setVertexBuffer:_gal_axesBuffer offset:0 atIndex:0 ];
-    [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
-    [renderEncoder setVertexBytes:&colours[COLOUR_IND_AXES_SAG] length:sizeof(float4) atIndex:2 ];
-    [renderEncoder setVertexBytes:&pointsize[POINT_IND_DEFAULT] length:sizeof(float) atIndex:3 ];
-
-    [renderEncoder drawPrimitives:MTLPrimitiveTypeLine vertexStart:0 vertexCount:6];
+  [renderEncoder drawPrimitives:MTLPrimitiveTypeLine vertexStart:0 vertexCount:6];
 #ifdef DEBUG_RENDER
-    NSLog(@"%s: encoded Gal Axes MTLPrimitiveTypeLine vertexcount %d", __FUNCTION__, 6);
+  NSLog(@"%s: encoded Sol Axes MTLPrimitiveTypeLine vertexcount %d", __FUNCTION__, 6);
 #endif
-    [renderEncoder popDebugGroup];
-
+  
+#if 0
+  simd::float4 axes_colour_saga;
+  axes_colour_saga[0]=0.0;
+  axes_colour_saga[1]=0.0;
+  axes_colour_saga[2]=1.0;
+  axes_colour_saga[3]=1.0;
+#endif
+  
+  id <MTLBuffer> _gal_axesBuffer;
+  _gal_axesBuffer = [_device newBufferWithBytes:gal_axes length:sizeof(float)*42 options:MTLResourceOptionCPUCacheModeDefault];
+  _gal_axesBuffer.label = @"GalAxes";
     
+  //  set vertex buffer for each journey segment
+  [renderEncoder setVertexBuffer:_gal_axesBuffer offset:0 atIndex:0 ];
+  [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
+  [renderEncoder setVertexBytes:&colours[COLOUR_IND_AXES_SAG] length:sizeof(float4) atIndex:2 ];
+  [renderEncoder setVertexBytes:&pointsize[POINT_IND_DEFAULT] length:sizeof(float) atIndex:3 ];
+
+  [renderEncoder drawPrimitives:MTLPrimitiveTypeLine vertexStart:0 vertexCount:6];
+#ifdef DEBUG_RENDER
+  NSLog(@"%s: encoded Gal Axes MTLPrimitiveTypeLine vertexcount %d", __FUNCTION__, 6);
+#endif
+  [renderEncoder popDebugGroup];
+
+  //[renderEncoder endEncoding];
+  
 #endif
     
 #ifdef DRAWGALAXY
-    [renderEncoder pushDebugGroup:@"Galaxy"];
-    simd::float4 colour_systems;
-    colour_systems[0]=0.0;
-    colour_systems[1]=0.0;
-    colour_systems[2]=1.0;
-    colour_systems[3]=1.0;
-    
-    galaxy_block_t *gb=thisGalaxy->first_galaxy_block;
-    while (gb!=NULL) {
+  //renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+  
+  [renderEncoder setDepthStencilState:_depthState];
+  [renderEncoder setRenderPipelineState:_pipelineState[MTL_PIPE_GALAXY_STAR]];
+  
+  [renderEncoder pushDebugGroup:@"Galaxy"];
+  
+#if 0
+  simd::float4 colour_systems;
+  colour_systems[0]=0.0;
+  colour_systems[1]=0.0;
+  colour_systems[2]=1.0;
+  colour_systems[3]=1.0;
+#endif
+  
+  galaxy_block_t *gb=thisGalaxy->first_galaxy_block;
+  while (gb!=NULL) {
 #ifdef DEBUG_RENDER
-      NSLog(@"%s: %d galaxy block %d of %d", __FUNCTION__, gb->numsystems, i, thisGalaxy->num_galaxy_blocks);
+    NSLog(@"%s: %d galaxy block %d of %d", __FUNCTION__, gb->numsystems, i, thisGalaxy->num_galaxy_blocks);
 #endif
       
+    id <MTLBuffer> _vertexBuffer;
+    
+    _vertexBuffer = [_device newBufferWithBytes:gb->systems length:sizeof(SystemVertex_t)*gb->numsystems options:MTLResourceOptionCPUCacheModeDefault];
+    _vertexBuffer.label = @"Systems";
+      
+    //  set vertex buffer for each journey segment
+    [renderEncoder setVertexBuffer:_vertexBuffer offset:0 atIndex:0 ];
+    [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
+    [renderEncoder setVertexBytes:&colours[COLOUR_IND_STAR] length:sizeof(float4) atIndex:2 ];
+    float starSize=pointsize[POINT_IND_DEFAULT]*(model_scale/POINT_SCALE);
+    [renderEncoder setVertexBytes:&starSize length:sizeof(float) atIndex:3 ];
+
+#if 0
+    // tell the render context we want to draw our primitives
+    if (starSize>10.0) {
+      [renderEncoder drawPrimitives:MTLPr vertexStart:0 vertexCount:gb->numsystems];
+
+    } else {
+#endif
+      [renderEncoder drawPrimitives:MTLPrimitiveTypePoint vertexStart:0 vertexCount:gb->numsystems];
+      
+#ifdef DEBUG_RENDER
+    NSLog(@"%s: encoded MTLPrimitiveTypePoint vertexcount %d", __FUNCTION__, gb->numsystems);
+#endif
+    gb=gb->next;
+  }
+    
+  [renderEncoder popDebugGroup];
+    //[renderEncoder endEncoding];
+    
+#endif
+    
+  if(enabled[FEATURE_JOURNEY]) {
+    //renderEncoder=[commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+    [renderEncoder pushDebugGroup:@"Journey"];
+
+    [renderEncoder setDepthStencilState:_depthState];
+    [renderEncoder setRenderPipelineState:_pipelineState[MTL_PIPE_JOURNEY]];
+    
+#if 0
+    simd::float4 colour_journey;
+    colour_journey[0]=0.0;
+    colour_journey[1]=1.0;
+    colour_journey[2]=0.0;
+    colour_journey[3]=1.0;
+#endif
+    
+    journey_block_t *jb=thisGalaxy->first_journey_block;
+    while (jb!=NULL) {
       id <MTLBuffer> _vertexBuffer;
       
-      _vertexBuffer = [_device newBufferWithBytes:gb->systems length:sizeof(SystemVertex_t)*gb->numsystems options:MTLResourceOptionCPUCacheModeDefault];
-      _vertexBuffer.label = @"Systems";
+      _vertexBuffer = [_device newBufferWithBytes:jb->systems length:sizeof(JourneyVertex_t)*jb->numsystems options:MTLResourceOptionCPUCacheModeDefault];
+      _vertexBuffer.label = @"Vertices";
       
       //  set vertex buffer for each journey segment
       [renderEncoder setVertexBuffer:_vertexBuffer offset:0 atIndex:0 ];
       [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
-      [renderEncoder setVertexBytes:&colours[COLOUR_IND_STAR] length:sizeof(float4) atIndex:2 ];
-      float starSize=pointsize[POINT_IND_DEFAULT]*(model_scale/POINT_SCALE);
+      [renderEncoder setVertexBytes:&colours[COLOUR_IND_JOURNEY] length:sizeof(float4) atIndex:2 ];
+      float starSize=pointsize[POINT_IND_BLINE]*(model_scale/POINT_SCALE);
       [renderEncoder setVertexBytes:&starSize length:sizeof(float) atIndex:3 ];
 
-#if 0
       // tell the render context we want to draw our primitives
-      if (starSize>10.0) {
-        [renderEncoder drawPrimitives:MTLPr vertexStart:0 vertexCount:gb->numsystems];
+      [renderEncoder drawPrimitives:MTLPrimitiveTypeLineStrip vertexStart:0 vertexCount:jb->numsystems ];
 
-      } else {
-#endif
-        [renderEncoder drawPrimitives:MTLPrimitiveTypePoint vertexStart:0 vertexCount:gb->numsystems];
-      
-#ifdef DEBUG_RENDER
-      NSLog(@"%s: encoded MTLPrimitiveTypePoint vertexcount %d", __FUNCTION__, gb->numsystems);
-#endif
-      gb=gb->next;
+      jb=jb->next;
     }
+    
     [renderEncoder popDebugGroup];
-
+    //[renderEncoder endEncoding];
     
-#endif
-    
-    if(enabled[FEATURE_JOURNEY]) {
-      [renderEncoder pushDebugGroup:@"Journey"];
-
-      simd::float4 colour_journey;
-      colour_journey[0]=0.0;
-      colour_journey[1]=1.0;
-      colour_journey[2]=0.0;
-      colour_journey[3]=1.0;
-    
-      journey_block_t *jb=thisGalaxy->first_journey_block;
-      while (jb!=NULL) {
-        id <MTLBuffer> _vertexBuffer;
-      
-        _vertexBuffer = [_device newBufferWithBytes:jb->systems length:sizeof(JourneyVertex_t)*jb->numsystems options:MTLResourceOptionCPUCacheModeDefault];
-        _vertexBuffer.label = @"Vertices";
-      
-        //  set vertex buffer for each journey segment
-        [renderEncoder setVertexBuffer:_vertexBuffer offset:0 atIndex:0 ];
-        [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
-        [renderEncoder setVertexBytes:&colours[COLOUR_IND_JOURNEY] length:sizeof(float4) atIndex:2 ];
-        float starSize=pointsize[POINT_IND_BLINE]*(model_scale/POINT_SCALE);
-        [renderEncoder setVertexBytes:&starSize length:sizeof(float) atIndex:3 ];
-
-        // tell the render context we want to draw our primitives
-        [renderEncoder drawPrimitives:MTLPrimitiveTypeLineStrip vertexStart:0 vertexCount:jb->numsystems ];
-
-        jb=jb->next;
-      }
-      [renderEncoder popDebugGroup];
-    }
-    
-    
-    if(enabled[FEATURE_JSTARS]) {
-      [renderEncoder pushDebugGroup:@"Journey"];
-
-      simd::float4 colour_jstars;
-      colour_jstars[0]=1.0;
-      colour_jstars[1]=1.0;
-      colour_jstars[2]=1.0;
-      colour_jstars[3]=1.0;
-      
-      // Slightly fuzzy would be nice too...
-      journey_block_t *jb=thisGalaxy->first_journey_block;
-      while (jb!=NULL) {
-        id <MTLBuffer> _vertexBuffer;
-      
-        _vertexBuffer = [_device newBufferWithBytes:jb->systems length:sizeof(JourneyVertex_t)*jb->numsystems options:MTLResourceOptionCPUCacheModeDefault];
-        _vertexBuffer.label = @"Vertices";
-      
-        //  set vertex buffer for each journey segment
-        [renderEncoder setVertexBuffer:_vertexBuffer offset:0 atIndex:0 ];
-        [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
-        [renderEncoder setVertexBytes:&colours[COLOUR_IND_JSTAR] length:sizeof(float4) atIndex:2 ];
-        float starSize=pointsize[POINT_IND_JSTAR]*(model_scale/POINT_SCALE);
-        [renderEncoder setVertexBytes:&starSize length:sizeof(float) atIndex:3 ];
-
-        //[renderEncoder setVertexBytes:&pointsize[POINT_IND_JSTAR] length:sizeof(float) atIndex:3 ];
-
-        // tell the render context we want to draw our primitives
-        [renderEncoder drawPrimitives:MTLPrimitiveTypePoint vertexStart:0 vertexCount:jb->numsystems ];
-
-        jb=jb->next;
-      }
-      [renderEncoder popDebugGroup];
-    }
-    
-    
-    if(enabled[FEATURE_STATIONS]) {
-      [renderEncoder pushDebugGroup:@"Stations"];
-      
-      simd::float4 colour_jstars;
-      colour_jstars[0]=1.0;
-      colour_jstars[1]=1.0;
-      colour_jstars[2]=1.0;
-      colour_jstars[3]=1.0;
-//
-      station_block_t *sb=thisGalaxy->first_station_block;
-      while(sb!=NULL) {
-        id <MTLBuffer> _vertexBuffer;
-      
-        _vertexBuffer = [_device newBufferWithBytes:sb->stations length:sizeof(StationVertex_t)*sb->numstations options:MTLResourceOptionCPUCacheModeDefault];
-        _vertexBuffer.label = @"Vertices";
-      
-        //  set vertex buffer for each journey segment
-        [renderEncoder setVertexBuffer:_vertexBuffer offset:0 atIndex:0 ];
-        [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
-        [renderEncoder setVertexBytes:&colours[COLOUR_IND_STATION] length:sizeof(float4) atIndex:2 ];
-        //[renderEncoder setVertexBytes:&pointsize[POINT_IND_STATION] length:sizeof(float) atIndex:3 ];
-        float starSize=pointsize[POINT_IND_STATION]*(model_scale/POINT_SCALE);
-        [renderEncoder setVertexBytes:&starSize length:sizeof(float) atIndex:3 ];
-      
-        // tell the render context we want to draw our primitives
-        [renderEncoder drawPrimitives:MTLPrimitiveTypePoint vertexStart:0 vertexCount:sb->numstations ];
-
-        sb=sb->next;
-      }
-      [renderEncoder popDebugGroup];
-    }
-  
-  
-  
-  
-    [renderEncoder endEncoding];
-    [renderEncoder popDebugGroup];
-    
-    // schedule a present once rendering to the framebuffer is complete
-    [commandBuffer presentDrawable:view.currentDrawable];
   }
+    
+    
+  if(enabled[FEATURE_JSTARS]) {
+    
+    //renderEncoder=[commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+    [renderEncoder pushDebugGroup:@"Journey"];
+
+    [renderEncoder setDepthStencilState:_depthState];
+    [renderEncoder setRenderPipelineState:_pipelineState[MTL_PIPE_JOURNEY_STAR]];
+
+#if 0
+    simd::float4 colour_jstars;
+    colour_jstars[0]=1.0;
+    colour_jstars[1]=1.0;
+    colour_jstars[2]=1.0;
+    colour_jstars[3]=1.0;
+#endif
+    
+    // Slightly fuzzy would be nice too...
+    journey_block_t *jb=thisGalaxy->first_journey_block;
+    while (jb!=NULL) {
+      id <MTLBuffer> _vertexBuffer;
+      
+      _vertexBuffer = [_device newBufferWithBytes:jb->systems length:sizeof(JourneyVertex_t)*jb->numsystems options:MTLResourceOptionCPUCacheModeDefault];
+      _vertexBuffer.label = @"JStars Vertices";
+      
+      //  set vertex buffer for each journey segment
+      [renderEncoder setVertexBuffer:_vertexBuffer offset:0 atIndex:0 ];
+      [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
+      [renderEncoder setVertexBytes:&colours[COLOUR_IND_JSTAR] length:sizeof(float4) atIndex:2 ];
+      float starSize=pointsize[POINT_IND_JSTAR]*(model_scale/POINT_SCALE);
+      [renderEncoder setVertexBytes:&starSize length:sizeof(float) atIndex:3 ];
+
+      //[renderEncoder setVertexBytes:&pointsize[POINT_IND_JSTAR] length:sizeof(float) atIndex:3 ];
+
+      // tell the render context we want to draw our primitives
+      [renderEncoder drawPrimitives:MTLPrimitiveTypePoint vertexStart:0 vertexCount:jb->numsystems ];
+
+      jb=jb->next;
+    }
+
+    [renderEncoder popDebugGroup];
+    //[renderEncoder endEncoding];
+
+  }
+    
+    
+  if(enabled[FEATURE_STATIONS]) {
+    //renderEncoder=[commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+    [renderEncoder pushDebugGroup:@"Stations"];
+
+    [renderEncoder setDepthStencilState:_depthState];
+    [renderEncoder setRenderPipelineState:_pipelineState[MTL_PIPE_STATION]];
+
+#if 0
+    simd::float4 colour_jstars;
+    colour_jstars[0]=1.0;
+    colour_jstars[1]=1.0;
+    colour_jstars[2]=1.0;
+    colour_jstars[3]=1.0;
+//
+#endif
+    
+    station_block_t *sb=thisGalaxy->first_station_block;
+    while(sb!=NULL) {
+      id <MTLBuffer> _vertexBuffer;
+      
+      _vertexBuffer = [_device newBufferWithBytes:sb->stations length:sizeof(StationVertex_t)*sb->numstations options:MTLResourceOptionCPUCacheModeDefault];
+      _vertexBuffer.label = @"Vertices";
+      
+      //  set vertex buffer for each journey segment
+      [renderEncoder setVertexBuffer:_vertexBuffer offset:0 atIndex:0 ];
+      [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
+      [renderEncoder setVertexBytes:&colours[COLOUR_IND_STATION] length:sizeof(float4) atIndex:2 ];
+      //[renderEncoder setVertexBytes:&pointsize[POINT_IND_STATION] length:sizeof(float) atIndex:3 ];
+      float starSize=pointsize[POINT_IND_STATION]*(model_scale/POINT_SCALE);
+      [renderEncoder setVertexBytes:&starSize length:sizeof(float) atIndex:3 ];
+      
+      // tell the render context we want to draw our primitives
+      [renderEncoder drawPrimitives:MTLPrimitiveTypePoint vertexStart:0 vertexCount:sb->numstations ];
+
+      sb=sb->next;
+    }
+    
+    [renderEncoder popDebugGroup];
+    
+  }
+  
+  [renderEncoder endEncoding];
+
+  // schedule a present once rendering to the framebuffer is complete
+  [commandBuffer presentDrawable:view.currentDrawable];
   
   // call the view's completion handler which is required by the view since it will signal its semaphore and set up the next buffer
   __block dispatch_semaphore_t block_sema = _inflight_semaphore;
   [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> buffer) {
-    
     // GPU has completed rendering the frame and is done using the contents of any buffers previously encoded on the CPU for that frame.
     // Signal the semaphore and allow the CPU to proceed and construct the next frame.
     dispatch_semaphore_signal(block_sema);
