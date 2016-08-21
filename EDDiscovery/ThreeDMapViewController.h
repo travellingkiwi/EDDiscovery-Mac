@@ -8,6 +8,8 @@
 //  Based on Apple MetalRenderer example
 
 #import <AppKit/AppKit.h>
+#import <simd/simd.h>
+#import <Metal/Metal.h>
 
 #define LY_2_MTL 300.0
 

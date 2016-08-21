@@ -23,7 +23,7 @@ using namespace simd;
 
 //
 // How many buffers to use in parallel for drawing... Apple use 3 (Triple Buffering) in their examples.
-static const long kInFlightCommandBuffers = 4;
+static const long kInFlightCommandBuffers = 3;
 
 #if 0
 static const float4 kBoxAmbientColors[2] = {
@@ -48,13 +48,11 @@ static const float4 kBoxDiffuseColors[2] = {
 #define SOLS_Y    0.0
 #define SOLS_Z    0.0
 
-#define START_EYE_X  1000.0
-#define START_EYE_Y   000.0
-#define START_EYE_Z  1000.0
+#define SAGA_X    (25.21875/LY_2_MTL)
+#define SAGA_Y   (-20.90625/LY_2_MTL)
+#define SAGA_Z (25899.96875/LY_2_MTL)
 
-#define POINT_SCALE     5.0
-
-static const float sol_axes[42] = {
+static const float sol_axes[18] = {
   SOLS_X-AXES_LEN, SOLS_Y,          SOLS_Z,
   SOLS_X+AXES_LEN, SOLS_Y,          SOLS_Z,
   SOLS_X,          SOLS_Y-AXES_LEN, SOLS_Z,
@@ -63,11 +61,7 @@ static const float sol_axes[42] = {
   SOLS_X,          SOLS_Y,          SOLS_Z+AXES_LEN,
 };
 
-#define SAGA_X    (25.21875/LY_2_MTL)
-#define SAGA_Y   (-20.90625/LY_2_MTL)
-#define SAGA_Z (25899.96875/LY_2_MTL)
-
-static const float gal_axes[42] = {
+static const float gal_axes[18] = {
   SAGA_X-AXES_LEN, SAGA_Y,          SAGA_Z,
   SAGA_X+AXES_LEN, SAGA_Y,          SAGA_Z,
   SAGA_X,          SAGA_Y-AXES_LEN, SAGA_Z,
@@ -75,6 +69,12 @@ static const float gal_axes[42] = {
   SAGA_X,          SAGA_Y,          SAGA_Z-AXES_LEN,
   SAGA_X,          SAGA_Y,          SAGA_Z+AXES_LEN
 };
+
+#define START_EYE_X  1000.0
+#define START_EYE_Y   000.0
+#define START_EYE_Z  1000.0
+
+#define POINT_SCALE     5.0
 
 #endif
 
@@ -100,7 +100,7 @@ galaxy_t *thisGalaxy;
 #define MAX_COLOUR_INDEX    6
 
 static const float4 colours[MAX_COLOUR_INDEX]= {
-  { 1.0, 1.0, 0.0, 1.0},                             // COLOUR_IND_STAR
+  { 1.0, 1.0, 0.0, 0.5},                             // COLOUR_IND_STAR
   { 0.0, 1.0, 0.0, 1.0},                             // COLOUR_IND_JOURNEY
   { 1.0, 1.0, 1.0, 1.0},                             // COLOUR_IND_JSTAR
   { 1.0, 0.0, 0.0, 1.0},                             // COLOUR_IND_AXES_SOL
@@ -395,9 +395,6 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
 #pragma mark Render
 
 - (void)render:(ThreeDMapView *)view {
-#ifdef DEBUG_RENDER
-  NSLog(@"%s: rendering", __FUNCTION__);
-#endif
   // Allow the renderer to preflight 3 frames on the CPU (using a semapore as a guard) and commit them to the GPU.
   // This semaphore will get signaled once the GPU completes a frame's work via addCompletedHandler callback below,
   // signifying the CPU can go ahead and prepare another frame.
@@ -414,21 +411,12 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   
   id <MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
 
-  //renderEncoder=[commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
   [renderEncoder setDepthStencilState:_depthState];
   [renderEncoder setRenderPipelineState:_pipelineState[MTL_PIPE_SIMPLELINE]];
   
 #ifdef DRAWAXES
   // Draw the axes....
   [renderEncoder pushDebugGroup:@"Axes"];
-
-#if 0
-  simd::float4 axes_colour_sol;
-  axes_colour_sol[0]=1.0;
-  axes_colour_sol[1]=0.0;
-  axes_colour_sol[2]=0.0;
-  axes_colour_sol[3]=1.0;
-#endif
   
   id <MTLBuffer> _sol_axesBuffer;
   _sol_axesBuffer = [_device newBufferWithBytes:sol_axes length:sizeof(float)*42 options:MTLResourceOptionCPUCacheModeDefault];
@@ -441,17 +429,6 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   [renderEncoder setVertexBytes:&pointsize[POINT_IND_DEFAULT] length:sizeof(float) atIndex:3 ];
     
   [renderEncoder drawPrimitives:MTLPrimitiveTypeLine vertexStart:0 vertexCount:6];
-#ifdef DEBUG_RENDER
-  NSLog(@"%s: encoded Sol Axes MTLPrimitiveTypeLine vertexcount %d", __FUNCTION__, 6);
-#endif
-  
-#if 0
-  simd::float4 axes_colour_saga;
-  axes_colour_saga[0]=0.0;
-  axes_colour_saga[1]=0.0;
-  axes_colour_saga[2]=1.0;
-  axes_colour_saga[3]=1.0;
-#endif
   
   id <MTLBuffer> _gal_axesBuffer;
   _gal_axesBuffer = [_device newBufferWithBytes:gal_axes length:sizeof(float)*42 options:MTLResourceOptionCPUCacheModeDefault];
@@ -464,36 +441,21 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   [renderEncoder setVertexBytes:&pointsize[POINT_IND_DEFAULT] length:sizeof(float) atIndex:3 ];
 
   [renderEncoder drawPrimitives:MTLPrimitiveTypeLine vertexStart:0 vertexCount:6];
-#ifdef DEBUG_RENDER
-  NSLog(@"%s: encoded Gal Axes MTLPrimitiveTypeLine vertexcount %d", __FUNCTION__, 6);
-#endif
+
   [renderEncoder popDebugGroup];
 
-  //[renderEncoder endEncoding];
   
 #endif
     
 #ifdef DRAWGALAXY
-  //renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
   
   [renderEncoder setDepthStencilState:_depthState];
   [renderEncoder setRenderPipelineState:_pipelineState[MTL_PIPE_GALAXY_STAR]];
   
   [renderEncoder pushDebugGroup:@"Galaxy"];
   
-#if 0
-  simd::float4 colour_systems;
-  colour_systems[0]=0.0;
-  colour_systems[1]=0.0;
-  colour_systems[2]=1.0;
-  colour_systems[3]=1.0;
-#endif
-  
   galaxy_block_t *gb=thisGalaxy->first_galaxy_block;
   while (gb!=NULL) {
-#ifdef DEBUG_RENDER
-    NSLog(@"%s: %d galaxy block %d of %d", __FUNCTION__, gb->numsystems, i, thisGalaxy->num_galaxy_blocks);
-#endif
       
     id <MTLBuffer> _vertexBuffer;
     
@@ -528,19 +490,10 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
 #endif
     
   if(enabled[FEATURE_JOURNEY]) {
-    //renderEncoder=[commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
     [renderEncoder pushDebugGroup:@"Journey"];
 
     [renderEncoder setDepthStencilState:_depthState];
     [renderEncoder setRenderPipelineState:_pipelineState[MTL_PIPE_JOURNEY]];
-    
-#if 0
-    simd::float4 colour_journey;
-    colour_journey[0]=0.0;
-    colour_journey[1]=1.0;
-    colour_journey[2]=0.0;
-    colour_journey[3]=1.0;
-#endif
     
     journey_block_t *jb=thisGalaxy->first_journey_block;
     while (jb!=NULL) {
@@ -570,19 +523,10 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
     
   if(enabled[FEATURE_JSTARS]) {
     
-    //renderEncoder=[commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
     [renderEncoder pushDebugGroup:@"Journey"];
 
     [renderEncoder setDepthStencilState:_depthState];
     [renderEncoder setRenderPipelineState:_pipelineState[MTL_PIPE_JOURNEY_STAR]];
-
-#if 0
-    simd::float4 colour_jstars;
-    colour_jstars[0]=1.0;
-    colour_jstars[1]=1.0;
-    colour_jstars[2]=1.0;
-    colour_jstars[3]=1.0;
-#endif
     
     // Slightly fuzzy would be nice too...
     journey_block_t *jb=thisGalaxy->first_journey_block;
@@ -599,8 +543,6 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
       float starSize=pointsize[POINT_IND_JSTAR]*(model_scale/POINT_SCALE);
       [renderEncoder setVertexBytes:&starSize length:sizeof(float) atIndex:3 ];
 
-      //[renderEncoder setVertexBytes:&pointsize[POINT_IND_JSTAR] length:sizeof(float) atIndex:3 ];
-
       // tell the render context we want to draw our primitives
       [renderEncoder drawPrimitives:MTLPrimitiveTypePoint vertexStart:0 vertexCount:jb->numsystems ];
 
@@ -608,7 +550,6 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
     }
 
     [renderEncoder popDebugGroup];
-    //[renderEncoder endEncoding];
 
   }
     
@@ -619,15 +560,6 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
 
     [renderEncoder setDepthStencilState:_depthState];
     [renderEncoder setRenderPipelineState:_pipelineState[MTL_PIPE_STATION]];
-
-#if 0
-    simd::float4 colour_jstars;
-    colour_jstars[0]=1.0;
-    colour_jstars[1]=1.0;
-    colour_jstars[2]=1.0;
-    colour_jstars[3]=1.0;
-//
-#endif
     
     station_block_t *sb=thisGalaxy->first_station_block;
     while(sb!=NULL) {

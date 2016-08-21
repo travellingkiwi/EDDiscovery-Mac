@@ -320,8 +320,6 @@
   BOOL handled = NO;
   NSString  *characters;
  
-  NSLog(@"%s:", __FUNCTION__);
-
   // get the pressed key
   characters = [event charactersIgnoringModifiers];
   
