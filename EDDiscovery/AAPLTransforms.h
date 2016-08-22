@@ -30,6 +30,10 @@ namespace AAPL
   
   simd::float4x4 translate(const simd::float3& t);
   
+  simd::float4x4 rotate(const float x,
+                              const float y,
+                              const float z);
+
   simd::float4x4 rotate(const float& angle,
                         const float& x,
                         const float& y,

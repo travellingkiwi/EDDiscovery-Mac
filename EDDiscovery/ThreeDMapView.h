@@ -48,11 +48,12 @@
 // rendering delegate (App must implement a rendering delegate that responds to these messages
 @protocol ThreeDMapViewDelegate <NSObject>
 @required
+- (void)rotateView:(float)x y:(float)y z:(float)z;
 - (void)reshape:(ThreeDMapView *)view;        // called if the view changes orientation or size, renderer can precompute its view and projection matricies here for example
 - (void)render:(ThreeDMapView *)view;         // delegate should perform all rendering here
 - (void)toggleFeature:(int)feature;
 - (void)zoom:(float)direction;
-- (BOOL)keyDown:(NSString *)characters;
+- (BOOL)keyDown:(NSString *)characters keycode:(uint)keyCode;
 
 @end
 

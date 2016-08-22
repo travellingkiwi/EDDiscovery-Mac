@@ -102,6 +102,7 @@ fragment half4 journey_star_frag(ColorInOut in [[stage_in]]) {
 vertex ColorInOut galaxy_star_vertex(device journey_vertex_t* vertex_array [[ buffer(0) ]],
                               constant AAPL::constants_t& constants [[ buffer(1) ]],
                               constant float4 *colour,
+                              constant float *decay,
                               constant float *point_size,
                               unsigned int vid [[ vertex_id ]]) {
   ColorInOut out;
@@ -115,10 +116,11 @@ vertex ColorInOut galaxy_star_vertex(device journey_vertex_t* vertex_array [[ bu
   // will provide for a brighter point
   // The eye position is in constants.kEye
   float sep=distance(constants.kCentre, vertex_array[vid].position);
-  
-  out.color = half4((*colour) * (4/sep));
-  //out.color = half4(constants.ambient_color + constants.diffuse_color);
-  
+  if(*decay==0.0f) {
+    out.color=half4(*colour);
+  } else {
+    out.color = half4((*colour) * (*decay/sep));
+  }  
   return out;
 }
 

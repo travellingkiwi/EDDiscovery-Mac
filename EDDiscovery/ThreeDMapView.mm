@@ -15,6 +15,11 @@
 @private
   __weak CAMetalLayer *_metalLayer;
   
+  // Mouse Drag stuff...
+  BOOL _dragging;
+  NSPoint _lastDragLocation;
+  
+  
   BOOL _layerSizeDidUpdate;
   
   id <MTLTexture>  _depthTex;
@@ -248,47 +253,50 @@
   _layerSizeDidUpdate = YES;
 }
 
-#if 0
+#if 1
+
+- (void)scrollWheel:(NSEvent *)theEvent {
+  NSLog(@"%s: user scrolled %f horizontally and %f vertically", __FUNCTION__, [theEvent deltaX], [theEvent deltaY]);
+  [_delegate zoom:[theEvent deltaY]];
+}
 
 -(void)mouseDown:(NSEvent *)event {
   NSPoint clickLocation;
-  BOOL itemHit=NO;
+  //BOOL itemHit=NO;
   
   // convert the click location into the view coords
   clickLocation = [self convertPoint:[event locationInWindow]
                             fromView:nil];
   
   // did the click occur in the item?
-  itemHit = [self isPointInItem:clickLocation];
+  //itemHit = [self isPointInItem:clickLocation];
   
   // Yes it did, note that we're starting to drag
-  if (itemHit) {
+  //if (itemHit) {
     // flag the instance variable that indicates
     // a drag was actually started
-    dragging=YES;
+    _dragging=YES;
     
     // store the starting click location;
-    lastDragLocation=clickLocation;
+    _lastDragLocation=clickLocation;
     
     // set the cursor to the closed hand cursor
     // for the duration of the drag
     [[NSCursor closedHandCursor] push];
-  }
+  //}
 }
 
 -(void)mouseDragged:(NSEvent *)event {
-  if (dragging) {
-    NSPoint newDragLocation=[self convertPoint:[event locationInWindow]
-                                      fromView:nil];
+  if (_dragging) {
+    NSPoint newDragLocation=[self convertPoint:[event locationInWindow] fromView:nil];
     
+    NSLog(@"%s: x %8.4f y %8.4f z %8.4f", __FUNCTION__, (newDragLocation.x-_lastDragLocation.x), (newDragLocation.y-_lastDragLocation.y), 0.0f);
     
-    // offset the pill by the change in mouse movement
-    // in the event
-    [self offsetLocationByX:(newDragLocation.x-lastDragLocation.x)
-                       andY:(newDragLocation.y-lastDragLocation.y)];
+    // Rotate...
+    [_delegate rotateView:(newDragLocation.y-_lastDragLocation.y) y:(newDragLocation.x-_lastDragLocation.x) z:0.0f];
     
     // save the new drag location for the next drag event
-    lastDragLocation=newDragLocation;
+    _lastDragLocation=newDragLocation;
     
     // support automatic scrolling during a drag
     // by calling NSView's autoscroll: method
@@ -297,14 +305,14 @@
 }
 
 -(void)mouseUp:(NSEvent *)event {
-  dragging=NO;
+  _dragging=NO;
   
   // finished dragging, restore the cursor
   [NSCursor pop];
   
   // the item has moved, we need to reset our cursor
   // rectangle
-  [[self window] invalidateCursorRectsForView:self];
+  //[[self window] invalidateCursorRectsForView:self];
 }
 #endif
 
@@ -323,7 +331,7 @@
   // get the pressed key
   characters = [event charactersIgnoringModifiers];
   
-  handled=[_delegate keyDown:characters];
+  handled=[_delegate keyDown:characters keycode:[event keyCode]];
   
   if (!handled) {
     NSLog(@"%s: (%@) %u", __FUNCTION__, characters, [event keyCode]);

@@ -76,6 +76,28 @@ static float AAPLRadiansOverPi(const float& degrees)
   return (degrees * k1Div180_f);
 } // AAPLRadiansOverPi
 
+
+simd::float4x4 AAPL::rotate(const float x, const float y, const float z) {
+#if 0
+  float a = AAPLRadiansOverPi(x);
+  float b = AAPLRadiansOverPi(y);
+  float c = AAPLRadiansOverPi(z);
+  float sinx=0.0f, siny=0.0f, sinz=0.0f;
+  float cosx=0.0f, cosy=0.0f, cosz=0.0f;
+  
+  __sincospif(a, &sinx, &cosx);
+  __sincospif(b, &siny, &cosy);
+  __sincospif(c, &sinz, &cosz);
+
+  simd::float4 P={cosy*cosz, sinx*siny*cosz,
+  simd::float4 Q;
+  simd::float4 R;
+  simd::float4 S;
+#endif
+    
+  return rotate(x, 1.0, 0.0, 0.0)*rotate(y, 0.0, 1.0, 0.0)*rotate(z, 0.0, 0.0, 1.0);
+}
+
 simd::float4x4 AAPL::rotate(const float& angle,
                             const simd::float3& r)
 {

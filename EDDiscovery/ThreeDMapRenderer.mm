@@ -70,7 +70,7 @@ static const float gal_axes[18] = {
   SAGA_X,          SAGA_Y,          SAGA_Z+AXES_LEN
 };
 
-#define START_EYE_X  1000.0
+#define START_EYE_X   000.0
 #define START_EYE_Y   000.0
 #define START_EYE_Z  1000.0
 
@@ -84,9 +84,8 @@ static const float3 kUp     = { 0.0f,  1.0f,  0.0f};
 float model_scale = 1.0f;
 
 //
-static float3 kCentre = { 0.0f,  0.0f,  0.0f};
-static float3 kEye    = {START_EYE_X/LY_2_MTL, START_EYE_Y/LY_2_MTL, START_EYE_Z/LY_2_MTL};
-
+static float3 kCentre    = { 0.0f,  0.0f,  0.0f};
+static float3 kEye       = {START_EYE_X/LY_2_MTL, START_EYE_Y/LY_2_MTL, START_EYE_Z/LY_2_MTL};
 
 galaxy_t *thisGalaxy;
 
@@ -156,7 +155,11 @@ static const mtl_pipe_t mtl_pipe[MTL_PIPE_COUNT]={
   // globals used in update calculation
   float4x4 _projectionMatrix;
   float4x4 _viewMatrix;
-  float _rotation;
+  float _rotate_x;
+  float _rotate_y;
+  float _rotate_z;
+  
+  float _star_decay;
   
   long _maxBufferBytesPerFrame;
   size_t _sizeOfConstantT;
@@ -218,24 +221,29 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
 #endif
 
 - (void)setPosition:(float)x y:(float)y z:(float)z  {
-  kCentre[0]=x;
-  kCentre[1]=y;
-  kCentre[2]=z;
+  NSLog(@"%s:         set [%8.4f %8.4f %8.4f]", __FUNCTION__, x, y, z);
+
+  kCentre.x=x;
+  kCentre.y=y;
+  kCentre.z=z;
   
   //kEye[0]=kCentre[0]+10.0f;
   //kEye[1]=kCentre[1]+5.0f;
   //kEye[2]=kCentre[2]+5.0f;
-  kEye[0]=kCentre[0]+(START_EYE_X/LY_2_MTL);
-  kEye[1]=kCentre[1]+(START_EYE_Y/LY_2_MTL);
-  kEye[2]=kCentre[2]+(START_EYE_Z/LY_2_MTL);
+  //kEye[0]=kCentre[0]+(START_EYE_X/LY_2_MTL);
+  //kEye[1]=kCentre[1]+(START_EYE_Y/LY_2_MTL);
+  //kEye[2]=kCentre[2]+(START_EYE_Z/LY_2_MTL);
   
+  [self rotateView:_rotate_x y:_rotate_y z:_rotate_z];
+
   for(int i=0; i<kInFlightCommandBuffers; i++) {
     constants_t *constant_buffer = (constants_t *)[_dynamicConstantBuffer[i] contents];
     constant_buffer[0].kCentre=kCentre;
   }
 
-  NSLog(@"%s: kCentre set [%8.4f %8.4f %8.4f]", __FUNCTION__, kCentre[0], kCentre[1], kCentre[2]);
-  NSLog(@"%s: kEye    set [%8.4f %8.4f %8.4f]", __FUNCTION__, kEye[0], kEye[1], kEye[2]);
+  NSLog(@"%s: kUp     set [%8.4f %8.4f %8.4f]", __FUNCTION__, kUp.x, kUp.y, kUp.z);
+  NSLog(@"%s: kEye    set [%8.4f %8.4f %8.4f]", __FUNCTION__, kEye.x, kEye.y, kEye.z);
+  NSLog(@"%s: kCentre set [%8.4f %8.4f %8.4f]", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
   
 }
 
@@ -251,6 +259,12 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
     _constantDataBufferIndex = 0;
     _inflight_semaphore = dispatch_semaphore_create(kInFlightCommandBuffers);
   }
+  
+  _rotate_x=0.0f;
+  _rotate_y=0.0f;
+  _rotate_z=0.0f;
+  
+  _star_decay=10.0f;
   
   return self;
 }
@@ -466,8 +480,9 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
     [renderEncoder setVertexBuffer:_vertexBuffer offset:0 atIndex:0 ];
     [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
     [renderEncoder setVertexBytes:&colours[COLOUR_IND_STAR] length:sizeof(float4) atIndex:2 ];
+    [renderEncoder setVertexBytes:&_star_decay length:sizeof(float) atIndex:3 ];
     float starSize=pointsize[POINT_IND_DEFAULT]*(model_scale/POINT_SCALE);
-    [renderEncoder setVertexBytes:&starSize length:sizeof(float) atIndex:3 ];
+    [renderEncoder setVertexBytes:&starSize length:sizeof(float) atIndex:4 ];
 
 #if 0
     // tell the render context we want to draw our primitives
@@ -615,7 +630,9 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   _projectionMatrix = perspective_fov(kFOVY, aspect, 0.1f, 100.0f);
   _viewMatrix = lookAt(kEye, kCentre, kUp);
   
-  NSLog(@"%s: (reshaped aspect=%8.4f)", __FUNCTION__, aspect);
+  NSLog(@"%s: reshaped kUp     (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
+  NSLog(@"%s: reshaped kEye    (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
+  NSLog(@"%s: reshaped kCentre (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
 
 }
 
@@ -631,7 +648,7 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   constants_t *constant_buffer = (constants_t *)[_dynamicConstantBuffer[_constantDataBufferIndex] contents];
   
   //simd::float4x4 modelViewMatrix = AAPL::translate(0.0f, 0.0f, 1.5f) * AAPL::rotate(_rotation, 0.0f, 1.0f, 0.0f);
-  simd::float4x4 modelViewMatrix = AAPL::translate(kCentre[0], kCentre[1], kCentre[2]) * AAPL::rotate(_rotation, 0.0f, 1.0f, 0.0f) * scale(model_scale, model_scale, model_scale) * AAPL::translate(-kCentre[0], -kCentre[1], -kCentre[2]);
+  simd::float4x4 modelViewMatrix = AAPL::translate(kCentre[0], kCentre[1], kCentre[2]) * AAPL::rotate(0.0f, 0.0f, 1.0f, 0.0f) * scale(model_scale, model_scale, model_scale) * AAPL::translate(-kCentre[0], -kCentre[1], -kCentre[2]);
   modelViewMatrix = baseModelViewMatrix * modelViewMatrix;
 
   int i=0;
@@ -642,7 +659,7 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
 
 // just use this to update app globals
 - (void)update:(ThreeDMapViewController *)controller {
-  _rotation += controller.timeSinceLastDraw * 1.0f;
+  //  _rotation += controller.timeSinceLastDraw * 1.0f;
   
 
   
@@ -655,6 +672,36 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
 
 }
 
+//
+//
+- (void)rotateView:(float)x y:(float)y z:(float)z {
+  NSLog(@"%s: (%8.4f %8.4f %8.4f)", __FUNCTION__, x, y, z);
+ 
+  _rotate_x-=x;
+  _rotate_y-=y;
+  _rotate_z+=z;
+
+  // Rotate universe needs to actually rotate the VIEWpoint (i.e. eye location)
+  // translate back to centre@(0,0,0), rotate by (x,y.z), translate back to centre...
+  NSLog(@"%s: Rotate    (%8.4f, %8.4f, %8.4f) now (%8.4f %8.4f %8.4f)", __FUNCTION__, x, y, z, _rotate_x, _rotate_y, _rotate_z);
+  NSLog(@"%s: Translate (%8.4f, %8.4f, %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
+
+  simd::float4x4 eyeMoveMatrix=translate(0.0f, 0.0f, 0.0f)*AAPL::rotate(_rotate_x, _rotate_y, _rotate_z)*AAPL::translate(kCentre.x, kCentre.y, kCentre.z);
+  simd::float4 mEye={START_EYE_X/LY_2_MTL, START_EYE_Y/LY_2_MTL, START_EYE_Z/LY_2_MTL, 1.0f};
+  simd::float4 mEffective=mEye*eyeMoveMatrix;
+  
+  kEye.x=mEffective.x+kCentre.x;
+  kEye.y=mEffective.y+kCentre.y;
+  kEye.z=mEffective.z+kCentre.z;
+  
+  _viewMatrix = lookAt(kEye, kCentre, kUp);
+
+  NSLog(@"%s: reshaped kEye    (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
+  NSLog(@"%s: reshaped kCentre (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
+  NSLog(@"%s: reshaped kUp     (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
+
+}
+  
 - (void)setFeatureEnable:(int)feature enable:(BOOL)enable {
   if(feature>=MAX_FEATURES) {
     NSLog(@"%s: feature %d (%s)", __FUNCTION__, feature, "INVALID");
@@ -673,16 +720,13 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   enabled[feature]=!enabled[feature];
 }
 
-- (void)zoom:(float)direction {
-  model_scale+=direction;
-  
-  NSLog(@"%s: scale=%8.4f", __FUNCTION__, model_scale);
-  
+- (void)zoom:(float)scale {
+  model_scale*=scale;
   
   //[self updateConstantBuffer];
 }
 
-- (BOOL)keyDown:(NSString *)characters {
+- (BOOL)keyDown:(NSString *)characters keycode:(uint)keyCode{
   if ([characters isEqual:@"j"]) {
     // Toggle the journey...
     [self toggleFeature:FEATURE_JOURNEY];
@@ -694,13 +738,36 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
     return TRUE;
   }
   if ([characters isEqual:@"["]) {
-    [self zoom:0.05];
+    [self zoom:1.10];
     return TRUE;
   }
   if ([characters isEqual:@"]"]) {
     // Toggle the journey...
-    [self zoom:-0.05];
+    [self zoom:0.90];
     return TRUE;
+  }
+  if ([characters isEqual:@"h"]) {
+    // Toggle the star distance intensity
+    if(_star_decay<0.01f) {
+      _star_decay=10.0f;
+    } else {
+      _star_decay=0.0f;
+    }
+    return TRUE;
+  }
+  switch(keyCode) {
+    case 123 : // LEFT cursor
+      [self rotateView:0.0f y:1.0f z:0.0f];
+      return TRUE;
+    case 124 : // RIGHT cursor
+      [self rotateView:0.0f y:-1.0f z:0.0f];
+      return TRUE;
+    case 125 : //
+      [self rotateView:1.0f y:0.0f z:0.0f];
+      return TRUE;
+    case 126 : //
+      [self rotateView:-1.0f y:0.0f z:0.0f];
+      return TRUE;
   }
   return FALSE;
 }
