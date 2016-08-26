@@ -22,6 +22,7 @@ namespace AAPL
         simd::float4   ambient_color;
         simd::float4   diffuse_color;
         simd::float3   kCentre;
+        simd::float3   kEye;
       
         int            multiplier;
     } __attribute__ ((aligned (256)));

@@ -10,12 +10,13 @@
 #import <AppKit/AppKit.h>
 #import <simd/simd.h>
 #import <Metal/Metal.h>
+#import "NetLogParser.h"
 
 #define LY_2_MTL 300.0
 
 @protocol ThreeDMapViewControllerDelegate;
 
-@interface ThreeDMapViewController : NSViewController 
+@interface ThreeDMapViewController : NSViewController <NetLogParserDelegate>
 
 @property (nonatomic, weak) id <ThreeDMapViewControllerDelegate> delegate;
 

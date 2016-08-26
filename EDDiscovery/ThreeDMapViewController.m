@@ -493,5 +493,43 @@ static void insert_system_block(galaxy_t *galaxy, galaxy_block_t *gb) {
 }
 
 
+- (void)jumpToSystem:(System *)system {
+  NSLog(@"%s:", __FUNCTION__);
+
+  
+  Jump *last=[Jump lastXYZJumpOfCommander:Commander.activeCommander];
+  
+  journey_block_t *journey=galaxy.last_journey_block;
+  
+  if (last.system.hasCoordinates) { // && !jump.hidden) {
+    [_renderer setPosition:last.system.x/LY_2_MTL y:last.system.y/LY_2_MTL z:last.system.z/LY_2_MTL];
+
+    if(journey==NULL) {
+      //NSLog(@"%s: journey is NULL - allocating %lu bytes for new one", __FUNCTION__, sizeof(journey_block_t));
+      
+      if((journey=calloc(sizeof(journey_block_t), 1))==NULL) {
+        NSLog(@"%s: Unable to calloc %lu Bytes for journey_block_t", __FUNCTION__, sizeof(journey_block_t));
+        exit(-1);
+      }
+    }
+    
+    JourneyVertex_t *point=&journey->systems[journey->numsystems];
+    
+    point->posx = last.system.x/LY_2_MTL;
+    point->posy = last.system.y/LY_2_MTL;
+    point->posz = last.system.z/LY_2_MTL;
+    
+    NSLog(@"%s: Jump Point %d (%@) BLOCK %d BLI %d (%8.4f %8.4f %8.4f)", __FUNCTION__, galaxy.total_journey_points+journey->numsystems, last.system.name, galaxy.num_journey_blocks, journey->numsystems, point->posx, point->posy, point->posz);
+    
+    if(++journey->numsystems >= JUMPS_PER_BLOCK) {
+      insert_journey_block(&galaxy, journey);
+      journey=NULL;
+    }
+  } else {
+    NSLog(@"%s: Jump Point (%@) - has no co-ordinates", __FUNCTION__, last.system.name);
+  }
+
+
+}
 
 @end

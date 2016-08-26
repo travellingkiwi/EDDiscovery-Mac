@@ -107,20 +107,27 @@ vertex ColorInOut galaxy_star_vertex(device journey_vertex_t* vertex_array [[ bu
                               unsigned int vid [[ vertex_id ]]) {
   ColorInOut out;
   
-  float4 in_position = float4(float3(vertex_array[vid].position), 1.0);
-  out.position = constants.modelview_projection_matrix * in_position;
-  out.point_size = *point_size;
+  // Test here for distance from centre... If we're too far away, just dont' draw it...
+  float sep=distance(constants.kEye, vertex_array[vid].position);
+  
+  //if(sep > some_magic_distance) {
+  //  discard_fragment();
+  //} else {
+    float4 in_position = float4(float3(vertex_array[vid].position), 1.0);
+    out.position = constants.modelview_projection_matrix * in_position;
+    out.point_size = *point_size;
 
-  // The colour of a star should vary with distance. The furher away, the more diffuse it should be
-  // however it should also combine wth the colours already present so two stars 'close' to each other
-  // will provide for a brighter point
-  // The eye position is in constants.kEye
-  float sep=distance(constants.kCentre, vertex_array[vid].position);
-  if(*decay==0.0f) {
-    out.color=half4(*colour);
-  } else {
-    out.color = half4((*colour) * (*decay/sep));
-  }  
+    // The colour of a star should vary with distance. The furher away, the more diffuse it should be
+    // however it should also combine wth the colours already present so two stars 'close' to each other
+    // will provide for a brighter point
+    // The centre position is in constants.kCentre
+    if(*decay==0.0f) {
+      out.color=half4(*colour);
+    } else {
+      out.color = half4((*colour) * float4x4(*decay/sep));
+    }
+  //}
+  
   return out;
 }
 

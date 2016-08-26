@@ -518,8 +518,12 @@ static NetLogParser *instance = nil;
           
           [allNames   insertObject:name   atIndex:idx];
           [allSystems insertObject:system atIndex:idx];
+          
+          
         }
       }
+      
+      [_delegate jumpToSystem:system ];
       
       Jump *jump = [allJumps filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"timestamp == %@", date]].lastObject;
       

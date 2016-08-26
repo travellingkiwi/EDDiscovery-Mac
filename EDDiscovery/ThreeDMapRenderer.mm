@@ -81,7 +81,7 @@ static const float gal_axes[18] = {
 static const float kFOVY    = 65.0f;
 static const float3 kUp     = { 0.0f,  1.0f,  0.0f};
 
-float model_scale = 1.0f;
+float model_scale = 0.25;
 
 //
 static float3 kCentre    = { 0.0f,  0.0f,  0.0f};
@@ -99,12 +99,12 @@ galaxy_t *thisGalaxy;
 #define MAX_COLOUR_INDEX    6
 
 static const float4 colours[MAX_COLOUR_INDEX]= {
-  { 1.0, 1.0, 0.0, 0.5},                             // COLOUR_IND_STAR
-  { 0.0, 1.0, 0.0, 1.0},                             // COLOUR_IND_JOURNEY
-  { 1.0, 1.0, 1.0, 1.0},                             // COLOUR_IND_JSTAR
-  { 1.0, 0.0, 0.0, 1.0},                             // COLOUR_IND_AXES_SOL
-  { 0.0, 0.0, 1.0, 1.0},                             // COLOUR_IND_AXE
-  { 1.0, 0.0, 1.0, 1.0},                             // COLOUR_IND_STATION
+  { 0.4, 0.4, 0.2, 0.05},                             // COLOUR_IND_STAR
+  { 0.0, 1.0, 0.0, 1.00},                             // COLOUR_IND_JOURNEY
+  { 1.0, 1.0, 1.0, 1.00},                             // COLOUR_IND_JSTAR
+  { 1.0, 0.0, 0.0, 1.00},                             // COLOUR_IND_AXES_SOL
+  { 0.0, 0.0, 1.0, 1.00},                             // COLOUR_IND_AXES_SAG
+  { 1.0, 0.0, 1.0, 1.00},                             // COLOUR_IND_STATION
 };
 
 #define POINT_IND_DEFAULT 0
@@ -239,6 +239,7 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   for(int i=0; i<kInFlightCommandBuffers; i++) {
     constants_t *constant_buffer = (constants_t *)[_dynamicConstantBuffer[i] contents];
     constant_buffer[0].kCentre=kCentre;
+    constant_buffer[0].kEye=kEye;
   }
 
   NSLog(@"%s: kUp     set [%8.4f %8.4f %8.4f]", __FUNCTION__, kUp.x, kUp.y, kUp.z);
@@ -334,7 +335,6 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
 }
 
 - (BOOL)preparePipelineState:(ThreeDMapView *)view {
-  NSLog(@"%s: (%s)", __FUNCTION__, "PREPARING PIPELINE");
 
 #if 0
   // get the fragment function from the library
@@ -371,6 +371,8 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   }
 #endif
   for (int i=0; i<MTL_PIPE_COUNT; i++) {
+    NSLog(@"%s: PREPARING PIPELINE [%d]", __FUNCTION__, i);
+
     id <MTLFunction> vertexProgram=[_defaultLibrary newFunctionWithName:[NSString stringWithUTF8String:mtl_pipe[i].vertex_prog_name]];
     if(!vertexProgram) {
       NSLog(@"%s: >> ERROR: Couldn't load vertex function %s from default library", __FUNCTION__, mtl_pipe[i].vertex_prog_name);
@@ -385,13 +387,22 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
     // create a pipeline state descriptor which can be used to create a compiled pipeline state object
     MTLRenderPipelineDescriptor *pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
     
-    pipelineStateDescriptor.label                           = @"MyPipeline";
-    pipelineStateDescriptor.sampleCount                     = view.sampleCount;
-    pipelineStateDescriptor.vertexFunction                  = vertexProgram;
-    pipelineStateDescriptor.fragmentFunction                = fragmentProgram;
-    pipelineStateDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
-    pipelineStateDescriptor.depthAttachmentPixelFormat      = view.depthPixelFormat;
+    pipelineStateDescriptor.label                                      = @"MyPipeline";
+    pipelineStateDescriptor.sampleCount                                = view.sampleCount;
+    pipelineStateDescriptor.vertexFunction                             = vertexProgram;
+    pipelineStateDescriptor.fragmentFunction                           = fragmentProgram;
+    pipelineStateDescriptor.colorAttachments[0].pixelFormat            = MTLPixelFormatBGRA8Unorm;
+    pipelineStateDescriptor.colorAttachments[0].blendingEnabled        = YES;
+    pipelineStateDescriptor.colorAttachments[0].rgbBlendOperation           = MTLBlendOperationAdd;
+    pipelineStateDescriptor.colorAttachments[0].alphaBlendOperation         = MTLBlendOperationAdd;
+    pipelineStateDescriptor.colorAttachments[0].sourceRGBBlendFactor        = MTLBlendFactorOne;
+    pipelineStateDescriptor.colorAttachments[0].sourceAlphaBlendFactor      = MTLBlendFactorOne;
+    pipelineStateDescriptor.colorAttachments[0].destinationRGBBlendFactor   = MTLBlendFactorOneMinusSourceAlpha;
+    pipelineStateDescriptor.colorAttachments[0].destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
     
+    pipelineStateDescriptor.depthAttachmentPixelFormat          = view.depthPixelFormat;
+    pipelineStateDescriptor.alphaToCoverageEnabled              = YES;
+
     // create a compiled pipeline state object. Shader functions (from the render pipeline descriptor)
     // are compiled when this is created unlessed they are obtained from the device's cache
     NSError *error = nil;
@@ -403,6 +414,8 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
 
 
   }
+  NSLog(@"%s: %d PIPELINES created", __FUNCTION__, MTL_PIPE_COUNT);
+
   return YES;
 }
 
@@ -481,7 +494,7 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
     [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
     [renderEncoder setVertexBytes:&colours[COLOUR_IND_STAR] length:sizeof(float4) atIndex:2 ];
     [renderEncoder setVertexBytes:&_star_decay length:sizeof(float) atIndex:3 ];
-    float starSize=pointsize[POINT_IND_DEFAULT]*(model_scale/POINT_SCALE);
+    float starSize=MIN(pointsize[POINT_IND_DEFAULT]*(model_scale/POINT_SCALE), 10.0f);
     [renderEncoder setVertexBytes:&starSize length:sizeof(float) atIndex:4 ];
 
 #if 0
@@ -555,7 +568,7 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
       [renderEncoder setVertexBuffer:_vertexBuffer offset:0 atIndex:0 ];
       [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
       [renderEncoder setVertexBytes:&colours[COLOUR_IND_JSTAR] length:sizeof(float4) atIndex:2 ];
-      float starSize=pointsize[POINT_IND_JSTAR]*(model_scale/POINT_SCALE);
+      float starSize=MIN(pointsize[POINT_IND_JSTAR]*(model_scale/POINT_SCALE), 10.0f);
       [renderEncoder setVertexBytes:&starSize length:sizeof(float) atIndex:3 ];
 
       // tell the render context we want to draw our primitives
@@ -630,10 +643,12 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   _projectionMatrix = perspective_fov(kFOVY, aspect, 0.1f, 100.0f);
   _viewMatrix = lookAt(kEye, kCentre, kUp);
   
+#if 0
   NSLog(@"%s: reshaped kUp     (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
   NSLog(@"%s: reshaped kEye    (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
   NSLog(@"%s: reshaped kCentre (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
-
+#endif
+  
 }
 
 #pragma mark Update
@@ -675,7 +690,7 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
 //
 //
 - (void)rotateView:(float)x y:(float)y z:(float)z {
-  NSLog(@"%s: (%8.4f %8.4f %8.4f)", __FUNCTION__, x, y, z);
+  //NSLog(@"%s: (%8.4f %8.4f %8.4f)", __FUNCTION__, x, y, z);
  
   _rotate_x-=x;
   _rotate_y-=y;
@@ -683,9 +698,11 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
 
   // Rotate universe needs to actually rotate the VIEWpoint (i.e. eye location)
   // translate back to centre@(0,0,0), rotate by (x,y.z), translate back to centre...
+#if 0
   NSLog(@"%s: Rotate    (%8.4f, %8.4f, %8.4f) now (%8.4f %8.4f %8.4f)", __FUNCTION__, x, y, z, _rotate_x, _rotate_y, _rotate_z);
   NSLog(@"%s: Translate (%8.4f, %8.4f, %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
-
+#endif
+  
   simd::float4x4 eyeMoveMatrix=translate(0.0f, 0.0f, 0.0f)*AAPL::rotate(_rotate_x, _rotate_y, _rotate_z)*AAPL::translate(kCentre.x, kCentre.y, kCentre.z);
   simd::float4 mEye={START_EYE_X/LY_2_MTL, START_EYE_Y/LY_2_MTL, START_EYE_Z/LY_2_MTL, 1.0f};
   simd::float4 mEffective=mEye*eyeMoveMatrix;
@@ -696,10 +713,12 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   
   _viewMatrix = lookAt(kEye, kCentre, kUp);
 
+#if 0
   NSLog(@"%s: reshaped kEye    (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
   NSLog(@"%s: reshaped kCentre (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
   NSLog(@"%s: reshaped kUp     (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
-
+#endif
+  
 }
   
 - (void)setFeatureEnable:(int)feature enable:(BOOL)enable {
@@ -726,6 +745,21 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   //[self updateConstantBuffer];
 }
 
+- (void) moveToward:(float3)destination scale:(float)scale {
+  NSLog(@"%s: MOVETO (%8.4f %8.4f %8.4f) @ %8.4f from (%8.4f %8.4f %8.4f)", __FUNCTION__, destination.x, destination.y, destination.z, scale, kEye.x, kEye.y, kEye.z);
+
+  float3 step=(kEye-destination)*scale;
+  NSLog(@"%s: STEP   (%8.4f %8.4f %8.4f)", __FUNCTION__, step.x, step.y, step.z);
+  
+  kEye.x-=step.x;
+  kEye.y-=step.y;
+  kEye.z-=step.z;
+
+  NSLog(@"%s: NOWAT  (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
+  _viewMatrix = lookAt(kEye, kCentre, kUp);
+
+}
+
 - (BOOL)keyDown:(NSString *)characters keycode:(uint)keyCode{
   if ([characters isEqual:@"j"]) {
     // Toggle the journey...
@@ -738,12 +772,11 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
     return TRUE;
   }
   if ([characters isEqual:@"["]) {
-    [self zoom:1.10];
+    [self moveToward:kCentre scale:0.01];
     return TRUE;
   }
   if ([characters isEqual:@"]"]) {
-    // Toggle the journey...
-    [self zoom:0.90];
+    [self moveToward:kCentre scale:-0.01];
     return TRUE;
   }
   if ([characters isEqual:@"h"]) {
@@ -753,6 +786,7 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
     } else {
       _star_decay=0.0f;
     }
+    NSLog(@"%s: _star_decay now %8.4f", __FUNCTION__, _star_decay);
     return TRUE;
   }
   switch(keyCode) {
