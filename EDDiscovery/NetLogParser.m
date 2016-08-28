@@ -523,8 +523,6 @@ static NetLogParser *instance = nil;
         }
       }
       
-      [_delegate jumpToSystem:system ];
-      
       Jump *jump = [allJumps filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"timestamp == %@", date]].lastObject;
       
       if (jump == nil) {
@@ -546,6 +544,7 @@ static NetLogParser *instance = nil;
       jump.netLogFile = netLogFile;
       
       (*lastJump) = jump;
+
     }
   }
 }

@@ -127,7 +127,8 @@ typedef struct galaxy_struct {
 #define FEATURE_JOURNEY            0
 #define FEATURE_JSTARS             1
 #define FEATURE_STATIONS           2
-#define MAX_FEATURES               3
+#define FEATURE_GALACTIC_PLANE     3
+#define MAX_FEATURES               4
 
 // load all assets before triggering rendering
 - (void)configure:(ThreeDMapView *)view galaxy:(galaxy_t *)galaxy;

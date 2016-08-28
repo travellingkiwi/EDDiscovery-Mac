@@ -29,6 +29,9 @@ struct ColorInOut {
   half4 color;
 };
 
+// variables in constant address space
+constant float3 light_position = float3(0.0, 1.0, -1.0);
+
 // vertex shader function
 vertex ColorInOut simple_line_vertex(device journey_vertex_t* vertex_array [[ buffer(0) ]],
                                       constant AAPL::constants_t& constants [[ buffer(1) ]],
@@ -133,5 +136,35 @@ vertex ColorInOut galaxy_star_vertex(device journey_vertex_t* vertex_array [[ bu
 
 // fragment shader function
 fragment half4 galaxy_star_frag(ColorInOut in [[stage_in]]) {
+  return in.color;
+}
+
+// vertex shader function
+vertex ColorInOut galactic_plane_vertex(device vertex_t* vertex_array [[ buffer(0) ]],
+                                     constant AAPL::constants_t& constants [[ buffer(1) ]],
+                                     constant float4 *colour,
+                                     constant float *decay,
+                                     constant float *point_size,
+                                     unsigned int vid [[ vertex_id ]]) {
+  ColorInOut out;
+  
+  float4 in_position = float4(float3(vertex_array[vid].position), 1.0);
+  out.position = constants.modelview_projection_matrix * in_position;
+#if 0
+  float3 normal = vertex_array[vid].normal;
+  float4 eye_normal = normalize(constants.normal_matrix * float4(normal, 0.0));
+  float n_dot_l = dot(eye_normal.rgb, normalize(light_position));
+  n_dot_l = fmax(0.0, n_dot_l);
+
+  out.color = half4(constants.ambient_color + constants.diffuse_color * n_dot_l);
+#endif
+  
+  out.color =  half4(*colour);
+
+  return out;
+}
+
+// fragment shader function
+fragment half4 galactic_plane_frag(ColorInOut in [[stage_in]]) {
   return in.color;
 }

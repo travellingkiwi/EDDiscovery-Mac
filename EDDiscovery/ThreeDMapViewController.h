@@ -16,7 +16,7 @@
 
 @protocol ThreeDMapViewControllerDelegate;
 
-@interface ThreeDMapViewController : NSViewController <NetLogParserDelegate>
+@interface ThreeDMapViewController : NSViewController
 
 @property (nonatomic, weak) id <ThreeDMapViewControllerDelegate> delegate;
 
@@ -33,6 +33,7 @@
 
 // use invalidates the main game loop. when the app is set to terminate
 - (void)stopGameLoop;
+- (void)jumpToSystem:(System * __nonnull)system;
 
 @end
 
@@ -45,6 +46,7 @@
 
 // called whenever the main game loop is paused, such as when the app is backgrounded
 - (void)viewController:(ThreeDMapViewController *)controller willPause:(BOOL)pause;
+
 
 @end
 

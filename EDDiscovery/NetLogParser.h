@@ -13,8 +13,6 @@
 
 @class Commander;
 
-@protocol NetLogParserDelegate;
-
 @interface NetLogParser : NSObject {
   
 }
@@ -24,14 +22,5 @@
 
 - (void)startInstance:(void(^__nonnull)(void))completionBlock;
 - (void)stopInstance;
-
-@property (nonatomic, weak) id <NetLogParserDelegate> delegate;
-
-@end
-
-
-@protocol NetLogParserDelegate <NSObject>
-@required
-- (void)jumpToSystem:(System *)system;
 
 @end

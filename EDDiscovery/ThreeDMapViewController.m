@@ -64,6 +64,47 @@
   }
 }
 
+//
+// We've just jumped in here...
+//- (void)jumpToSystem:(System * __nonnull)system {
+- (void)jumpToSystem {
+  NSLog(@"%s:", __FUNCTION__);
+  
+  Jump *last=[Jump lastXYZJumpOfCommander:Commander.activeCommander];
+  
+  journey_block_t *journey=galaxy.last_journey_block;
+  
+  if (last.system.hasCoordinates) { // && !jump.hidden) {
+    [_renderer setPosition:last.system.x/LY_2_MTL y:last.system.y/LY_2_MTL z:last.system.z/LY_2_MTL];
+    
+    if(journey==NULL) {
+      //NSLog(@"%s: journey is NULL - allocating %lu bytes for new one", __FUNCTION__, sizeof(journey_block_t));
+      
+      if((journey=calloc(sizeof(journey_block_t), 1))==NULL) {
+        NSLog(@"%s: Unable to calloc %lu Bytes for journey_block_t", __FUNCTION__, sizeof(journey_block_t));
+        exit(-1);
+      }
+    }
+    
+    JourneyVertex_t *point=&journey->systems[journey->numsystems];
+    
+    point->posx = last.system.x/LY_2_MTL;
+    point->posy = last.system.y/LY_2_MTL;
+    point->posz = last.system.z/LY_2_MTL;
+    
+    NSLog(@"%s: Jump Point %d (%@) BLOCK %d BLI %d (%8.4f %8.4f %8.4f)", __FUNCTION__, galaxy.total_journey_points+journey->numsystems, last.system.name, galaxy.num_journey_blocks, journey->numsystems, point->posx, point->posy, point->posz);
+    
+    if(++journey->numsystems >= JUMPS_PER_BLOCK) {
+      insert_journey_block(&galaxy, journey);
+      journey=NULL;
+    }
+  } else {
+    NSLog(@"%s: Jump Point (%@) - has no co-ordinates", __FUNCTION__, last.system.name);
+  }
+  
+  
+}
+
 // This is the renderer output callback function
 static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
                                  const CVTimeStamp* now,
@@ -183,10 +224,11 @@ static CVReturn dispatchGameLoop(CVDisplayLinkRef displayLink,
   
   [_renderer reshape:self.view];
   
-  [NSWorkspace.sharedWorkspace.notificationCenter addObserver:self selector:@selector(loadJumpsAndWaypoints) name:NEW_JUMP_NOTIFICATION object:nil];
-  
-  static dispatch_once_t onceToken;
+  //[NSWorkspace.sharedWorkspace.notificationCenter addObserver:self selector:@selector(loadJumpsAndWaypoints) name:NEW_JUMP_NOTIFICATION object:nil];
+  [NSWorkspace.sharedWorkspace.notificationCenter addObserver:self selector:@selector(jumpToSystem) name:NEW_JUMP_NOTIFICATION object:nil];
+
 #if 0
+  static dispatch_once_t onceToken;
   dispatch_once(&onceToken, ^{
 
     bload=[backLoader new];
@@ -281,7 +323,9 @@ static void insert_system_block(galaxy_t *galaxy, galaxy_block_t *gb) {
   // For some reason these calls can't be made in anything otther than the Main Thread...
   // Yet other calls (e.g. to get the jumps) can be made in a background thread...
   //   But when they are, they pause the main thread...
-    
+  
+  NSAssert(galaxy.total_systems==0, @"called with total_systems != 0");
+  
   NSArray  *jumps = [Jump allJumpsOfCommander:Commander.activeCommander];
     
   Jump *last=[Jump lastXYZJumpOfCommander:Commander.activeCommander];
@@ -292,20 +336,6 @@ static void insert_system_block(galaxy_t *galaxy, galaxy_block_t *gb) {
     journey_block_t *journey=galaxy.first_journey_block;
   
     NSLog(@"%s:", __FUNCTION__);
-
-#if 0
-    // If the jumps are not null... We need to refresh them...
-    journey_block_t *jb=galaxy.first_journey_block;
-    while(jb!=NULL) {
-      journey_block_t *dj=jb;
-      jb=jb->next;
-      dj->next=NULL;
-    
-      free(dj);
-    }
-    galaxy.first_journey_block=NULL;
-    galaxy.last_journey_block=NULL;
-#endif
     
     for (Jump *jump in jumps) {
     
@@ -493,43 +523,5 @@ static void insert_system_block(galaxy_t *galaxy, galaxy_block_t *gb) {
 }
 
 
-- (void)jumpToSystem:(System *)system {
-  NSLog(@"%s:", __FUNCTION__);
-
-  
-  Jump *last=[Jump lastXYZJumpOfCommander:Commander.activeCommander];
-  
-  journey_block_t *journey=galaxy.last_journey_block;
-  
-  if (last.system.hasCoordinates) { // && !jump.hidden) {
-    [_renderer setPosition:last.system.x/LY_2_MTL y:last.system.y/LY_2_MTL z:last.system.z/LY_2_MTL];
-
-    if(journey==NULL) {
-      //NSLog(@"%s: journey is NULL - allocating %lu bytes for new one", __FUNCTION__, sizeof(journey_block_t));
-      
-      if((journey=calloc(sizeof(journey_block_t), 1))==NULL) {
-        NSLog(@"%s: Unable to calloc %lu Bytes for journey_block_t", __FUNCTION__, sizeof(journey_block_t));
-        exit(-1);
-      }
-    }
-    
-    JourneyVertex_t *point=&journey->systems[journey->numsystems];
-    
-    point->posx = last.system.x/LY_2_MTL;
-    point->posy = last.system.y/LY_2_MTL;
-    point->posz = last.system.z/LY_2_MTL;
-    
-    NSLog(@"%s: Jump Point %d (%@) BLOCK %d BLI %d (%8.4f %8.4f %8.4f)", __FUNCTION__, galaxy.total_journey_points+journey->numsystems, last.system.name, galaxy.num_journey_blocks, journey->numsystems, point->posx, point->posy, point->posz);
-    
-    if(++journey->numsystems >= JUMPS_PER_BLOCK) {
-      insert_journey_block(&galaxy, journey);
-      journey=NULL;
-    }
-  } else {
-    NSLog(@"%s: Jump Point (%@) - has no co-ordinates", __FUNCTION__, last.system.name);
-  }
-
-
-}
 
 @end

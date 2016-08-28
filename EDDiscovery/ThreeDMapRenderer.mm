@@ -42,11 +42,11 @@ static const float4 kBoxDiffuseColors[2] = {
 #define DRAWAXES
 
 #ifdef DRAWAXES
-#define AXES_LEN  500.0/LY_2_MTL
+#define AXES_LEN    (1000.0/LY_2_MTL)
 
-#define SOLS_X    0.0
-#define SOLS_Y    0.0
-#define SOLS_Z    0.0
+#define SOLS_X         (0.0/LY_2_MTL)
+#define SOLS_Y         (0.0/LY_2_MTL)
+#define SOLS_Z         (0.0/LY_2_MTL)
 
 #define SAGA_X    (25.21875/LY_2_MTL)
 #define SAGA_Y   (-20.90625/LY_2_MTL)
@@ -70,6 +70,20 @@ static const float gal_axes[18] = {
   SAGA_X,          SAGA_Y,          SAGA_Z+AXES_LEN
 };
 
+// A flat plane composed of two triangles...
+#define PLANE_WIDTH  (10000.0f/LY_2_MTL)
+#define PLANE_HEIGHT     (0.0f/LY_2_MTL)
+#define PLANE_DEPTH  (10000.0f/LY_2_MTL)
+
+static const float galactic_plane [] = {
+  SOLS_X-PLANE_WIDTH, SOLS_Y+PLANE_HEIGHT, SOLS_Z+PLANE_DEPTH,   0.0, 1.0,  0.0,
+  SOLS_X+PLANE_WIDTH, SOLS_Y+PLANE_HEIGHT, SOLS_Z+PLANE_DEPTH,   0.0, 1.0,  0.0,
+  SOLS_X+PLANE_WIDTH, SOLS_Y+PLANE_HEIGHT, SOLS_Z-PLANE_DEPTH,   0.0, 1.0,  0.0,
+  SOLS_X+PLANE_WIDTH, SOLS_Y+PLANE_HEIGHT, SOLS_Z-PLANE_DEPTH,   0.0, 1.0,  0.0,
+  SOLS_X-PLANE_WIDTH, SOLS_Y+PLANE_HEIGHT, SOLS_Z+PLANE_DEPTH,   0.0, 1.0,  0.0,
+  SOLS_X+PLANE_WIDTH, SOLS_Y+PLANE_HEIGHT, SOLS_Z-PLANE_DEPTH,   0.0, 1.0,  0.0,
+};
+
 #define START_EYE_X   000.0
 #define START_EYE_Y   000.0
 #define START_EYE_Z  1000.0
@@ -89,14 +103,16 @@ static float3 kEye       = {START_EYE_X/LY_2_MTL, START_EYE_Y/LY_2_MTL, START_EY
 
 galaxy_t *thisGalaxy;
 
-#define COLOUR_IND_STAR     0
-#define COLOUR_IND_JOURNEY  1
-#define COLOUR_IND_JSTAR    2
-#define COLOUR_IND_AXES_SOL 3
-#define COLOUR_IND_AXES_SAG 4
-#define COLOUR_IND_STATION  5
+#define COLOUR_IND_STAR       0
+#define COLOUR_IND_JOURNEY    1
+#define COLOUR_IND_JSTAR      2
+#define COLOUR_IND_AXES_SOL   3
+#define COLOUR_IND_AXES_SAG   4
+#define COLOUR_IND_STATION    5
+#define COLOUR_IND_PLANE      6
+#define COLOUR_IND_PLANE_GRID 7
 
-#define MAX_COLOUR_INDEX    6
+#define MAX_COLOUR_INDEX      8
 
 static const float4 colours[MAX_COLOUR_INDEX]= {
   { 0.4, 0.4, 0.2, 0.05},                             // COLOUR_IND_STAR
@@ -105,6 +121,9 @@ static const float4 colours[MAX_COLOUR_INDEX]= {
   { 1.0, 0.0, 0.0, 1.00},                             // COLOUR_IND_AXES_SOL
   { 0.0, 0.0, 1.0, 1.00},                             // COLOUR_IND_AXES_SAG
   { 1.0, 0.0, 1.0, 1.00},                             // COLOUR_IND_STATION
+  { 0.2, 0.2, 0.8, 0.01},                             // COLOUR_IND_PLANE
+  { 0.2, 0.2, 0.8, 0.25},                             // COLOUR_IND_PLANE_GRID
+  
 };
 
 #define POINT_IND_DEFAULT 0
@@ -115,13 +134,13 @@ static const float4 colours[MAX_COLOUR_INDEX]= {
 
 static const float pointsize[MAX_POINT_SIZES]={1.0, 15.00, 20.000, 15.00};
 
-#define MTL_PIPE_SIMPLELINE   0        // Simple lines - e.g. the Axes of interest
-#define MTL_PIPE_GALAXY_STAR  1        // Draws the stars in the galaxy...
-#define MTL_PIPE_JOURNEY_STAR 2        // Draws the stars that we've journeyed to
-#define MTL_PIPE_JOURNEY      3        // Draws the journey itself
-#define MTL_PIPE_STATION      4        // Draws the journey itself
-
-#define MTL_PIPE_COUNT        5        // Number of metal pipelines to have defined
+#define MTL_PIPE_SIMPLELINE     0        // Simple lines - e.g. the Axes of interest
+#define MTL_PIPE_GALAXY_STAR    1        // Draws the stars in the galaxy...
+#define MTL_PIPE_JOURNEY_STAR   2        // Draws the stars that we've journeyed to
+#define MTL_PIPE_JOURNEY        3        // Draws the journey itself
+#define MTL_PIPE_STATION        4        // Draws the journey itself
+#define MTL_PIPE_GALACTIC_PLANE 5
+#define MTL_PIPE_COUNT          6        // Number of metal pipelines to have defined
 
 typedef struct mtl_pipe_s {
   const char *name;
@@ -137,6 +156,8 @@ static const mtl_pipe_t mtl_pipe[MTL_PIPE_COUNT]={
   {"Journey Star", "journey_star_vertex", "journey_star_frag", NULL, NULL},
   {"Journey Path", "journey_path_vertex", "journey_star_frag", NULL, NULL},
   {"Station", "galaxy_star_vertex", "galaxy_star_frag", NULL, NULL},
+  {"Galactic Plane", "galactic_plane_vertex", "galactic_plane_frag", NULL, NULL},
+  //  {"Galactic Grid", "galactic_grid_vertex", "gatactic_grid_frag", NULL, NULL},
   
 };
 
@@ -171,10 +192,10 @@ static const mtl_pipe_t mtl_pipe[MTL_PIPE_COUNT]={
 }
 
 static const char *features[MAX_FEATURES] = {
-  "Journey", "JStars", "Stations",
+  "Journey", "JStars", "Stations", "Galactic Plane",
 };
 
-static BOOL enabled[MAX_FEATURES] = {1, 1, 1};
+static BOOL enabled[MAX_FEATURES] = {1, 1, 1, 0};
 
 #if 0
 //
@@ -267,6 +288,7 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   
   _star_decay=10.0f;
   
+
   return self;
 }
 
@@ -336,40 +358,6 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
 
 - (BOOL)preparePipelineState:(ThreeDMapView *)view {
 
-#if 0
-  // get the fragment function from the library
-  id <MTLFunction> fragmentProgram = [_defaultLibrary newFunctionWithName:@"journey_fragment"];
-  if(!fragmentProgram) {
-    NSLog(@">> ERROR: Couldn't load journey fragment function from default library");
-    exit(-1);
-  }
-  
-  // get the vertex function from the library
-  id <MTLFunction> vertexProgram = [_defaultLibrary newFunctionWithName:@"star_vertex"];
-  if(!vertexProgram) {
-    NSLog(@">> ERROR: Couldn't load journey vertex function from default library");
-    exit(-1);
-  }
-  
-  // create a pipeline state descriptor which can be used to create a compiled pipeline state object
-  MTLRenderPipelineDescriptor *pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
-  
-  pipelineStateDescriptor.label                           = @"MyPipeline";
-  pipelineStateDescriptor.sampleCount                     = view.sampleCount;
-  pipelineStateDescriptor.vertexFunction                  = vertexProgram;
-  pipelineStateDescriptor.fragmentFunction                = fragmentProgram;
-  pipelineStateDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
-  pipelineStateDescriptor.depthAttachmentPixelFormat      = view.depthPixelFormat;
-  
-  // create a compiled pipeline state object. Shader functions (from the render pipeline descriptor)
-  // are compiled when this is created unlessed they are obtained from the device's cache
-  NSError *error = nil;
-  _pipelineState = [_device newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
-  if(!_pipelineState) {
-    NSLog(@">> ERROR: Failed Aquiring pipeline state: %@", error);
-    return NO;
-  }
-#endif
   for (int i=0; i<MTL_PIPE_COUNT; i++) {
     NSLog(@"%s: PREPARING PIPELINE [%d]", __FUNCTION__, i);
 
@@ -446,7 +434,7 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   [renderEncoder pushDebugGroup:@"Axes"];
   
   id <MTLBuffer> _sol_axesBuffer;
-  _sol_axesBuffer = [_device newBufferWithBytes:sol_axes length:sizeof(float)*42 options:MTLResourceOptionCPUCacheModeDefault];
+  _sol_axesBuffer = [_device newBufferWithBytes:sol_axes length:sizeof(gal_axes) options:MTLResourceOptionCPUCacheModeDefault];
   _sol_axesBuffer.label = @"SolAxes";
     
   //  set vertex buffer for each journey segment
@@ -458,7 +446,7 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   [renderEncoder drawPrimitives:MTLPrimitiveTypeLine vertexStart:0 vertexCount:6];
   
   id <MTLBuffer> _gal_axesBuffer;
-  _gal_axesBuffer = [_device newBufferWithBytes:gal_axes length:sizeof(float)*42 options:MTLResourceOptionCPUCacheModeDefault];
+  _gal_axesBuffer = [_device newBufferWithBytes:gal_axes length:sizeof(gal_axes) options:MTLResourceOptionCPUCacheModeDefault];
   _gal_axesBuffer.label = @"GalAxes";
     
   //  set vertex buffer for each journey segment
@@ -473,7 +461,29 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
 
   
 #endif
-    
+  
+  if(enabled[FEATURE_GALACTIC_PLANE]) {
+    // Draw the plane of the galaxy...
+    [renderEncoder setDepthStencilState:_depthState];
+    [renderEncoder setRenderPipelineState:_pipelineState[MTL_PIPE_GALACTIC_PLANE]];
+  
+    [renderEncoder pushDebugGroup:@"Galactic Plane"];
+  
+    id <MTLBuffer> _galactic_plane_buffer;
+    _galactic_plane_buffer = [_device newBufferWithBytes:galactic_plane length:sizeof(galactic_plane) options:MTLResourceOptionCPUCacheModeDefault];
+    _galactic_plane_buffer.label = @"GalacticPlane";
+  
+    //  set vertex buffer for each journey segment
+    [renderEncoder setVertexBuffer:_galactic_plane_buffer offset:0 atIndex:0 ];
+    [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
+    [renderEncoder setVertexBytes:&colours[COLOUR_IND_PLANE] length:sizeof(float4) atIndex:2 ];
+    [renderEncoder setVertexBytes:&pointsize[POINT_IND_DEFAULT] length:sizeof(float) atIndex:3 ];
+  
+    [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+
+    [renderEncoder popDebugGroup];
+  }
+  
 #ifdef DRAWGALAXY
   
   [renderEncoder setDepthStencilState:_depthState];
@@ -769,6 +779,11 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   if ([characters isEqual:@"s"]) {
     // Toggle the stations...
     [self toggleFeature:FEATURE_STATIONS];
+    return TRUE;
+  }
+  if ([characters isEqual:@"p"]) {
+    // Toggle the stations...
+    [self toggleFeature:FEATURE_GALACTIC_PLANE];
     return TRUE;
   }
   if ([characters isEqual:@"["]) {
