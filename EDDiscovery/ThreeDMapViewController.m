@@ -313,6 +313,31 @@ static void insert_system_block(galaxy_t *galaxy, galaxy_block_t *gb) {
 }
 
 
+- (void)savePoint:(System *)system point:(JourneyVertex_t *)point {
+  //
+  point->posx = system.x/LY_2_MTL;
+  point->posy = system.y/LY_2_MTL;
+  point->posz = system.z/LY_2_MTL;
+  
+}
+
+journey_block_t *newJourneyBlock(JourneyVertex_t *point) {
+  NSLog(@"%s: allocating %lu bytes for new one - point is %p", __FUNCTION__, sizeof(journey_block_t), point);
+  journey_block_t *journey;
+  
+  if((journey=calloc(sizeof(journey_block_t), 1))==NULL) {
+    NSLog(@"%s: Unable to calloc %lu Bytes for journey_block_t", __FUNCTION__, sizeof(journey_block_t));
+    exit(-1);
+  }
+  if(point!=NULL) {
+    journey->systems[journey->numsystems].posx=point->posx;
+    journey->systems[journey->numsystems].posy=point->posy;
+    journey->systems[journey->numsystems].posz=point->posz;
+    journey->numsystems++;
+  }
+  return journey;
+}
+
 //
 // All this loading should be done by a thread in the background. So we
 //   a. Update automatically as things go along
@@ -338,28 +363,23 @@ static void insert_system_block(galaxy_t *galaxy, galaxy_block_t *gb) {
     NSLog(@"%s:", __FUNCTION__);
     
     for (Jump *jump in jumps) {
-    
+      JourneyVertex_t *point=NULL;
+      
       if (jump.system.hasCoordinates) { // && !jump.hidden) {
         if(journey==NULL) {
-          //NSLog(@"%s: journey is NULL - allocating %lu bytes for new one", __FUNCTION__, sizeof(journey_block_t));
-        
-          if((journey=calloc(sizeof(journey_block_t), 1))==NULL) {
-            NSLog(@"%s: Unable to calloc %lu Bytes for journey_block_t", __FUNCTION__, sizeof(journey_block_t));
-            exit(-1);
-          }
+          journey=newJourneyBlock(point);
         }
 
-        JourneyVertex_t *point=&journey->systems[journey->numsystems];
+        point=&journey->systems[journey->numsystems];
       
-        point->posx = jump.system.x/LY_2_MTL;
-        point->posy = jump.system.y/LY_2_MTL;
-        point->posz = jump.system.z/LY_2_MTL;
+        [self savePoint:jump.system point:point];
       
         NSLog(@"%s: Jump Point %d (%@) BLOCK %d BLI %d (%8.4f %8.4f %8.4f)", __FUNCTION__, galaxy.total_journey_points+journey->numsystems, jump.system.name, galaxy.num_journey_blocks, journey->numsystems, point->posx, point->posy, point->posz);
 
         if(++journey->numsystems >= JUMPS_PER_BLOCK) {
           insert_journey_block(&galaxy, journey);
-          journey=NULL;
+          
+          journey=newJourneyBlock(point);
         }
       } else {
         NSLog(@"%s: Jump Point (%@) - has no co-ordinates", __FUNCTION__, jump.system.name);
