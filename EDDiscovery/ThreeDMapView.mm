@@ -257,7 +257,11 @@
 
 - (void)scrollWheel:(NSEvent *)theEvent {
   NSLog(@"%s: user scrolled %f horizontally and %f vertically", __FUNCTION__, [theEvent deltaX], [theEvent deltaY]);
-  [_delegate zoom:[theEvent deltaY]];
+  if([theEvent deltaY] < 0.0f ) {
+    [_delegate zoom:0.95];
+  } else if([theEvent deltaY] > 0.0f) {
+    [_delegate zoom:1.05];
+  }
 }
 
 -(void)mouseDown:(NSEvent *)event {

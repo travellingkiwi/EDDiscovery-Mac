@@ -84,21 +84,26 @@ static const float galactic_plane [] = {
   SOLS_X+PLANE_WIDTH, SOLS_Y+PLANE_HEIGHT, SOLS_Z-PLANE_DEPTH,   0.0, 1.0,  0.0,
 };
 
-#define START_EYE_X   000.0
-#define START_EYE_Y   000.0
-#define START_EYE_Z  1000.0
+#define START_EYE_X   500.0
+#define START_EYE_Y   500.0
+#define START_EYE_Z   500.0
 
 #define POINT_SCALE     5.0
 
 #endif
 
 static const float kFOVY    = 65.0f;
-static const float3 kUp     = { 0.0f,  1.0f,  0.0f};
 
 float model_scale = 0.25;
 
 //
+static float3 kUp        = { 0.0f,  1.0f,  0.0f};
 static float3 kCentre    = { 0.0f,  0.0f,  0.0f};
+
+// For the eye... We keep two points. The kEyeOffset is the offset we apply to the kCentre to
+// get the actual eye location. We keep this separate so when we jump the centre by an arbitrary
+// amount, we simple re-calculate the kEye by translating kEyeOffset by kCentre
+static float3 kEyeOffset = {START_EYE_X/LY_2_MTL, START_EYE_Y/LY_2_MTL, START_EYE_Z/LY_2_MTL};
 static float3 kEye       = {START_EYE_X/LY_2_MTL, START_EYE_Y/LY_2_MTL, START_EYE_Z/LY_2_MTL};
 
 galaxy_t *thisGalaxy;
@@ -704,29 +709,43 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
  
   _rotate_x-=x;
   _rotate_y-=y;
-  _rotate_z+=z;
-
+  _rotate_z-=z;
+  
   // Rotate universe needs to actually rotate the VIEWpoint (i.e. eye location)
-  // translate back to centre@(0,0,0), rotate by (x,y.z), translate back to centre...
-#if 0
-  NSLog(@"%s: Rotate    (%8.4f, %8.4f, %8.4f) now (%8.4f %8.4f %8.4f)", __FUNCTION__, x, y, z, _rotate_x, _rotate_y, _rotate_z);
-  NSLog(@"%s: Translate (%8.4f, %8.4f, %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
+  // translate back to centre@(0,0,0), rotate by (x,y.z), translate back...
+#if 1
+  NSLog(@"%s: Rotate  (%8.4f %8.4f %8.4f) now (%8.4f %8.4f %8.4f)", __FUNCTION__, x, y, z, _rotate_x, _rotate_y, _rotate_z);
+  NSLog(@"%s: kUp     (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
+  NSLog(@"%s: kEye    (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
+  NSLog(@"%s: Centre  (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
 #endif
   
-  simd::float4x4 eyeMoveMatrix=translate(0.0f, 0.0f, 0.0f)*AAPL::rotate(_rotate_x, _rotate_y, _rotate_z)*AAPL::translate(kCentre.x, kCentre.y, kCentre.z);
-  simd::float4 mEye={START_EYE_X/LY_2_MTL, START_EYE_Y/LY_2_MTL, START_EYE_Z/LY_2_MTL, 1.0f};
-  simd::float4 mEffective=mEye*eyeMoveMatrix;
+  simd::float4x4 rotateMatrix=AAPL::rotate(_rotate_x, _rotate_y, _rotate_z);
+
+  simd::float4 mEye={kEyeOffset.x, kEyeOffset.y, kEyeOffset.z, 1.0f};
+  simd::float4 mEyeEffective=mEye*rotateMatrix;
+
+  // The Up direction is simply rotatated... No translation required.
+  simd::float4 mUp={kUp.x, kUp.y, kUp.z, 1.0f};
+  simd::float4 mUpEffective=mUp*rotateMatrix;
   
-  kEye.x=mEffective.x+kCentre.x;
-  kEye.y=mEffective.y+kCentre.y;
-  kEye.z=mEffective.z+kCentre.z;
+  //  kEyeOffset.x=mEyeEffective.x;
+  //  kEyeOffset.y=mEyeEffective.y;
+  //  kEyeOffset.z=mEyeEffective.z;
+  kEye.x=mEyeEffective.x+kCentre.x;
+  kEye.y=mEyeEffective.y+kCentre.y;
+  kEye.z=mEyeEffective.z+kCentre.z;
+  
+  //kUp.x=mUpEffective.x;
+  //kUp.y=mUpEffective.y;
+  //kUp.z=mUpEffective.z;
   
   _viewMatrix = lookAt(kEye, kCentre, kUp);
 
-#if 0
-  NSLog(@"%s: reshaped kEye    (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
-  NSLog(@"%s: reshaped kCentre (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
-  NSLog(@"%s: reshaped kUp     (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
+#if 1
+  NSLog(@"%s: rotated kUp     (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
+  NSLog(@"%s: rotated kEye    (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
+  NSLog(@"%s: rotated kCentre (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
 #endif
   
 }
@@ -761,6 +780,7 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   float3 step=(kEye-destination)*scale;
   NSLog(@"%s: STEP   (%8.4f %8.4f %8.4f)", __FUNCTION__, step.x, step.y, step.z);
   
+  
   kEye.x-=step.x;
   kEye.y-=step.y;
   kEye.z-=step.z;
@@ -787,11 +807,11 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
     return TRUE;
   }
   if ([characters isEqual:@"["]) {
-    [self moveToward:kCentre scale:0.01];
+    [self moveToward:kCentre scale:0.05];
     return TRUE;
   }
   if ([characters isEqual:@"]"]) {
-    [self moveToward:kCentre scale:-0.01];
+    [self moveToward:kCentre scale:-0.05];
     return TRUE;
   }
   if ([characters isEqual:@"h"]) {

@@ -374,9 +374,11 @@ journey_block_t *newJourneyBlock(JourneyVertex_t *point) {
       
         [self savePoint:jump.system point:point];
       
-        NSLog(@"%s: Jump Point %d (%@) BLOCK %d BLI %d (%8.4f %8.4f %8.4f)", __FUNCTION__, galaxy.total_journey_points+journey->numsystems, jump.system.name, galaxy.num_journey_blocks, journey->numsystems, point->posx, point->posy, point->posz);
+        
 
         if(++journey->numsystems >= JUMPS_PER_BLOCK) {
+          NSLog(@"%s: Jump Point %d (%@) BLOCK %d BLI %d (%8.4f %8.4f %8.4f)", __FUNCTION__, galaxy.total_journey_points+journey->numsystems, jump.system.name, galaxy.num_journey_blocks, journey->numsystems, point->posx, point->posy, point->posz);
+          
           insert_journey_block(&galaxy, journey);
           
           journey=newJourneyBlock(point);
@@ -392,9 +394,6 @@ journey_block_t *newJourneyBlock(JourneyVertex_t *point) {
     }
   
     NSLog(@"%s: Finished loading jumps", __FUNCTION__);
-    // });
-
-    //dispatch_async(dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0), ^{
 
     // Now load the systems in the galaxy... Hmm... Wonder how long 1000000 vertices take to load...
 #ifdef DRAWGALAXY
