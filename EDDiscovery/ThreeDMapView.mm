@@ -269,8 +269,7 @@
   //BOOL itemHit=NO;
   
   // convert the click location into the view coords
-  clickLocation = [self convertPoint:[event locationInWindow]
-                            fromView:nil];
+  clickLocation = [self convertPoint:[event locationInWindow] fromView:nil];
   
   // did the click occur in the item?
   //itemHit = [self isPointInItem:clickLocation];
