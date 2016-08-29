@@ -246,6 +246,14 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
 }
 #endif
 
+//- (void)setConstatBuffer {
+//  for(int i=0; i<kInFlightCommandBuffers; i++) {
+//    constants_t *constant_buffer = (constants_t *)[_dynamicConstantBuffer[i] contents];
+//    constant_buffer[0].kCentre=kCentre;
+//    constant_buffer[0].kEye=kEye;
+//  }//
+//}
+
 - (void)setPosition:(float)x y:(float)y z:(float)z  {
   NSLog(@"%s:         set [%8.4f %8.4f %8.4f]", __FUNCTION__, x, y, z);
 
@@ -260,13 +268,9 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   //kEye[1]=kCentre[1]+(START_EYE_Y/LY_2_MTL);
   //kEye[2]=kCentre[2]+(START_EYE_Z/LY_2_MTL);
   
-  [self rotateView:_rotate_x y:_rotate_y z:_rotate_z];
+  [self rotateView:0.0f y:0.0f z:0.0f];
 
-  for(int i=0; i<kInFlightCommandBuffers; i++) {
-    constants_t *constant_buffer = (constants_t *)[_dynamicConstantBuffer[i] contents];
-    constant_buffer[0].kCentre=kCentre;
-    constant_buffer[0].kEye=kEye;
-  }
+  //[self setConstatBuffer];
 
   NSLog(@"%s: kUp     set [%8.4f %8.4f %8.4f]", __FUNCTION__, kUp.x, kUp.y, kUp.z);
   NSLog(@"%s: kEye    set [%8.4f %8.4f %8.4f]", __FUNCTION__, kEye.x, kEye.y, kEye.z);
@@ -675,15 +679,22 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   float4x4 baseModelViewMatrix = translate(0.0f, 0.0f, 0.0f) ;
   baseModelViewMatrix = _viewMatrix * baseModelViewMatrix;
   
-  constants_t *constant_buffer = (constants_t *)[_dynamicConstantBuffer[_constantDataBufferIndex] contents];
+  //constants_t *constant_buffer = (constants_t *)[_dynamicConstantBuffer[_constantDataBufferIndex] contents];
   
   //simd::float4x4 modelViewMatrix = AAPL::translate(0.0f, 0.0f, 1.5f) * AAPL::rotate(_rotation, 0.0f, 1.0f, 0.0f);
   simd::float4x4 modelViewMatrix = AAPL::translate(kCentre[0], kCentre[1], kCentre[2]) * AAPL::rotate(0.0f, 0.0f, 1.0f, 0.0f) * scale(model_scale, model_scale, model_scale) * AAPL::translate(-kCentre[0], -kCentre[1], -kCentre[2]);
   modelViewMatrix = baseModelViewMatrix * modelViewMatrix;
 
-  int i=0;
-  constant_buffer[i].normal_matrix = inverse(transpose(modelViewMatrix));
-  constant_buffer[i].modelview_projection_matrix = _projectionMatrix * modelViewMatrix;
+  //int i=0;
+  
+  for(int i=0; i<kInFlightCommandBuffers; i++) {
+    constants_t *constant_buffer = (constants_t *)[_dynamicConstantBuffer[i] contents];
+ 
+    constant_buffer->normal_matrix = inverse(transpose(modelViewMatrix));
+    constant_buffer->modelview_projection_matrix = _projectionMatrix * modelViewMatrix;
+    constant_buffer->kCentre=kCentre;
+    constant_buffer->kEye=kEye;
+  }
   
 }
 
