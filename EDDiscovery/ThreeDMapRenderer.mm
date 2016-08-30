@@ -85,7 +85,7 @@ static const float galactic_plane [] = {
 };
 
 #define START_EYE_X   500.0
-#define START_EYE_Y   500.0
+#define START_EYE_Y     0.0
 #define START_EYE_Z   500.0
 
 #define POINT_SCALE     5.0
@@ -104,7 +104,7 @@ static float3 kCentre    = { 0.0f,  0.0f,  0.0f};
 // get the actual eye location. We keep this separate so when we jump the centre by an arbitrary
 // amount, we simple re-calculate the kEye by translating kEyeOffset by kCentre
 static float3 kEyeOffset = {START_EYE_X/LY_2_MTL, START_EYE_Y/LY_2_MTL, START_EYE_Z/LY_2_MTL};
-static float3 kEye       = {START_EYE_X/LY_2_MTL, START_EYE_Y/LY_2_MTL, START_EYE_Z/LY_2_MTL};
+static float3 kEye       = {kCentre.x+kEyeOffset.x, kCentre.y+kEyeOffset.y, kCentre.z+kEyeOffset.z};
 
 galaxy_t *thisGalaxy;
 
@@ -796,7 +796,12 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   kEye.y-=step.y;
   kEye.z-=step.z;
 
-  NSLog(@"%s: NOWAT  (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
+  kCentre.x-=step.x;
+  kCentre.y-=step.y;
+  kCentre.z-=step.z;
+  
+  NSLog(@"%s: EYE@  (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
+  NSLog(@"%s: CEN@  (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
   _viewMatrix = lookAt(kEye, kCentre, kUp);
 
 }
