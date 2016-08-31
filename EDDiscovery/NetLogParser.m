@@ -241,7 +241,7 @@ static NetLogParser *instance = nil;
       progressValue++;
       
       if (netLogFile.complete == NO) {
-        NSLog(@"Parsing netLog file: %@", netLog);
+        NSLog(@"%s: Parsing netLog file: %@", __FUNCTION__, netLog);
         
         if ([netLog isEqualToString:netLogsFilesAttrs.lastObject[FILE_KEY]] == NO && allSystems == nil) {
           allSystems = [[System allSystemsInContext:WORK_CONTEXT] mutableCopy];
