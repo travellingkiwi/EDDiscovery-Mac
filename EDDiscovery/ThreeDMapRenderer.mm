@@ -122,7 +122,7 @@ galaxy_t *thisGalaxy;
 static const float4 colours[MAX_COLOUR_INDEX]= {
   { 0.4, 0.4, 0.2, 0.05},                             // COLOUR_IND_STAR
   { 0.0, 1.0, 0.0, 1.00},                             // COLOUR_IND_JOURNEY
-  { 1.0, 1.0, 1.0, 1.00},                             // COLOUR_IND_JSTAR
+  { 1.0, 0.0, 0.0, 1.00},                             // COLOUR_IND_JSTAR
   { 1.0, 0.0, 0.0, 1.00},                             // COLOUR_IND_AXES_SOL
   { 0.0, 0.0, 1.0, 1.00},                             // COLOUR_IND_AXES_SAG
   { 1.0, 0.0, 1.0, 1.00},                             // COLOUR_IND_STATION
