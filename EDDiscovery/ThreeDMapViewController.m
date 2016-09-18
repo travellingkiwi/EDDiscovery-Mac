@@ -431,7 +431,9 @@ journey_block_t *newJourneyBlock(JourneyVertex_t *point) {
     }
 
     NSLog(@"%s: Galaxy Loaded %d systems into %d blocks", __FUNCTION__, galaxy.total_systems, galaxy.num_galaxy_blocks);
-      
+
+    [_renderer setUpdate:TRUE];
+
   });
     
 #endif

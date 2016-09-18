@@ -190,10 +190,17 @@ static const mtl_pipe_t mtl_pipe[MTL_PIPE_COUNT]={
   long _maxBufferBytesPerFrame;
   size_t _sizeOfConstantT;
   
+  // If we've done something to deserve a redraw then set this TRUE...
+  BOOL _redrawPending;
+  
   // this value will cycle from 0 to g_max_inflight_buffers whenever a display completes ensuring renderer clients
   // can synchronize between g_max_inflight_buffers count buffers, and thus avoiding a constant buffer from being overwritten between draws
   NSUInteger _constantDataBufferIndex;
   
+  // Stats....
+  unsigned long long _totalRedraws;             // Total number of times redraw was called...
+  unsigned long long _actualRedraws;            // Actual number of times we redrew the display
+  unsigned long long _avoidRedraws;             // Number of times we avoided a redraw because we didnt' change anything
 }
 
 static const char *features[MAX_FEATURES] = {
@@ -272,9 +279,10 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
 
   //[self setConstatBuffer];
 
-  NSLog(@"%s: kUp     set [%8.4f %8.4f %8.4f]", __FUNCTION__, kUp.x, kUp.y, kUp.z);
-  NSLog(@"%s: kEye    set [%8.4f %8.4f %8.4f]", __FUNCTION__, kEye.x, kEye.y, kEye.z);
-  NSLog(@"%s: kCentre set [%8.4f %8.4f %8.4f]", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
+  NSLog(@"%s: kUp        set [%8.4f %8.4f %8.4f]", __FUNCTION__, kUp.x, kUp.y, kUp.z);
+  NSLog(@"%s: kEye       set [%8.4f %8.4f %8.4f]", __FUNCTION__, kEye.x, kEye.y, kEye.z);
+  NSLog(@"%s: kCentre    set [%8.4f %8.4f %8.4f]", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
+  NSLog(@"%s: kEyeOffset set [%8.4f %8.4f %8.4f]", __FUNCTION__, kEyeOffset.x, kEyeOffset.y, kEyeOffset.z);
   
 }
 
@@ -297,7 +305,11 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   
   _star_decay=10.0f;
   
-
+  _redrawPending=TRUE;
+  _totalRedraws=0;
+  _actualRedraws=0;
+  _avoidRedraws=0;
+  
   return self;
 }
 
@@ -419,10 +431,23 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
 #pragma mark Render
 
 - (void)render:(ThreeDMapView *)view {
+  _totalRedraws++;
+  
+  // If we're not pending a redraw, just return...
+  if(! _redrawPending) {
+    // Avoiding the redraw so increment...
+    _avoidRedraws++;
+    return;
+  }
+  NSLog(@"%s: _totalRedraws %llu _avoidedRedraw %llu _actualRedraw %llu", __FUNCTION__, _totalRedraws, _avoidRedraws, _actualRedraws);
+
   // Allow the renderer to preflight 3 frames on the CPU (using a semapore as a guard) and commit them to the GPU.
   // This semaphore will get signaled once the GPU completes a frame's work via addCompletedHandler callback below,
   // signifying the CPU can go ahead and prepare another frame.
   dispatch_semaphore_wait(_inflight_semaphore, DISPATCH_TIME_FOREVER);
+
+  // Increment actual redraws since we've started...
+  _actualRedraws++;
   
   // Prior to sending any data to the GPU, constant buffers should be updated accordingly on the CPU.
   [self updateConstantBuffer];
@@ -654,6 +679,9 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   // next portion of the ring buffer can be written by the CPU. Note, this should only be done *after* all writes to any
   // buffers requiring synchronization for a given frame is done in order to avoid writing a region of the ring buffer that the GPU may be reading.
   _constantDataBufferIndex = (_constantDataBufferIndex + 1) % kInFlightCommandBuffers;
+    
+  _redrawPending=FALSE;
+
 }
 
 - (void)reshape:(ThreeDMapView *)view {
@@ -663,11 +691,14 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   _viewMatrix = lookAt(kEye, kCentre, kUp);
   
 #if 0
-  NSLog(@"%s: reshaped kUp     (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
-  NSLog(@"%s: reshaped kEye    (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
-  NSLog(@"%s: reshaped kCentre (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
+  NSLog(@"%s: reshaped kUp        (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
+  NSLog(@"%s: reshaped kEye       (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
+  NSLog(@"%s: reshaped kCentre    (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
+  NSLog(@"%s: reshaped kEyeOffset [%8.4f %8.4f %8.4f]", __FUNCTION__, kEyeOffset.x, kEyeOffset.y, kEyeOffset.z);
+
 #endif
   
+  _redrawPending=TRUE;
 }
 
 #pragma mark Update
@@ -725,10 +756,12 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   // Rotate universe needs to actually rotate the VIEWpoint (i.e. eye location)
   // translate back to centre@(0,0,0), rotate by (x,y.z), translate back...
 #if 1
-  NSLog(@"%s: Rotate  (%8.4f %8.4f %8.4f) now (%8.4f %8.4f %8.4f)", __FUNCTION__, x, y, z, _rotate_x, _rotate_y, _rotate_z);
-  NSLog(@"%s: kUp     (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
-  NSLog(@"%s: kEye    (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
-  NSLog(@"%s: Centre  (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
+  NSLog(@"%s: Rotate     (%8.4f %8.4f %8.4f) now (%8.4f %8.4f %8.4f)", __FUNCTION__, x, y, z, _rotate_x, _rotate_y, _rotate_z);
+  NSLog(@"%s: kUp        (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
+  NSLog(@"%s: kEye       (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
+  NSLog(@"%s: Centre     (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
+  NSLog(@"%s: kEyeOffset [%8.4f %8.4f %8.4f]", __FUNCTION__, kEyeOffset.x, kEyeOffset.y, kEyeOffset.z);
+
 #endif
   
   simd::float4x4 rotateMatrix=AAPL::rotate(_rotate_x, _rotate_y, _rotate_z);
@@ -737,8 +770,8 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   simd::float4 mEyeEffective=mEye*rotateMatrix;
 
   // The Up direction is simply rotatated... No translation required.
-  simd::float4 mUp={kUp.x, kUp.y, kUp.z, 1.0f};
-  simd::float4 mUpEffective=mUp*rotateMatrix;
+  //simd::float4 mUp={kUp.x, kUp.y, kUp.z, 1.0f};
+  //simd::float4 mUpEffective=mUp*rotateMatrix;
   
   //  kEyeOffset.x=mEyeEffective.x;
   //  kEyeOffset.y=mEyeEffective.y;
@@ -754,13 +787,67 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   _viewMatrix = lookAt(kEye, kCentre, kUp);
 
 #if 1
-  NSLog(@"%s: rotated kUp     (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
-  NSLog(@"%s: rotated kEye    (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
-  NSLog(@"%s: rotated kCentre (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
+  NSLog(@"%s: rotated kUp        (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
+  NSLog(@"%s: rotated kEye       (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
+  NSLog(@"%s: rotated kCentre    (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
+  NSLog(@"%s: rotated kEyeOffset [%8.4f %8.4f %8.4f]", __FUNCTION__, kEyeOffset.x, kEyeOffset.y, kEyeOffset.z);
 #endif
   
+  _redrawPending=TRUE;
+
 }
+
+//
+// rotateSelf
+// rotate the centre around our eyepoint
+// centre * translate_eyepos * rotate * -translate_eyepos
+- (void)rotateSelf:(float)x y:(float)y z:(float)z {
+  //NSLog(@"%s: (%8.4f %8.4f %8.4f)", __FUNCTION__, x, y, z);
   
+#if 1
+  NSLog(@"%s: Rotate     (%8.4f %8.4f %8.4f)", __FUNCTION__, x, y, z);
+  NSLog(@"%s: kUp        (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
+  NSLog(@"%s: kEye       (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
+  NSLog(@"%s: Centre     (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
+  NSLog(@"%s: kEyeOffset [%8.4f %8.4f %8.4f]", __FUNCTION__, kEyeOffset.x, kEyeOffset.y, kEyeOffset.z);
+
+#endif
+  
+  simd::float4x4 transformMatrix=AAPL::translate(kEye.x, kEye.y, kEye.z) * AAPL::rotate(-x, -y, -z) * AAPL::translate(-kEye.x, -kEye.y, -kEye.z);
+  
+  simd::float4 mCentre={kCentre.x, kCentre.y, kCentre.z, 1.0f};
+  simd::float4 mCtrEffective=mCentre*transformMatrix;
+  
+  // The Up direction is simply rotatated... No translation required.
+  //simd::float4 mUp={kUp.x, kUp.y, kUp.z, 1.0f};
+  //simd::float4 mUpEffective=mUp*rotateMatrix;
+  
+  kCentre.x=mCtrEffective.x;
+  kCentre.y=mCtrEffective.y;
+  kCentre.z=mCtrEffective.z;
+  
+  //kUp.x=mUpEffective.x;
+  //kUp.y=mUpEffective.y;
+  //kUp.z=mUpEffective.z;
+  
+  _viewMatrix = lookAt(kEye, kCentre, kUp);
+  
+  kEyeOffset.x=kCentre.x-kEye.x;
+  kEyeOffset.y=kCentre.y-kEye.y;
+  kEyeOffset.z=kCentre.z-kEye.z;
+  
+#if 1
+  NSLog(@"%s: rotated kUp        (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
+  NSLog(@"%s: rotated kEye       (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
+  NSLog(@"%s: rotated kCentre    (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
+  NSLog(@"%s: rotated kEyeOffset [%8.4f %8.4f %8.4f]", __FUNCTION__, kEyeOffset.x, kEyeOffset.y, kEyeOffset.z);
+#endif
+  
+  
+  _redrawPending=TRUE;
+
+}
+
 - (void)setFeatureEnable:(int)feature enable:(BOOL)enable {
   if(feature>=MAX_FEATURES) {
     NSLog(@"%s: feature %d (%s)", __FUNCTION__, feature, "INVALID");
@@ -768,6 +855,9 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   }
   NSLog(@"%s: feature %d (%s)", __FUNCTION__, feature, features[feature]);
   enabled[feature]=enable;
+  
+  _redrawPending=TRUE;
+
 }
 
 - (void)toggleFeature:(int)feature {
@@ -777,12 +867,18 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   }
   NSLog(@"%s: feature %d (%s)", __FUNCTION__, feature, features[feature]);
   enabled[feature]=!enabled[feature];
+  
+  _redrawPending=TRUE;
+
 }
 
 - (void)zoom:(float)scale {
   model_scale*=scale;
   
   //[self updateConstantBuffer];
+  
+  _redrawPending=TRUE;
+
 }
 
 - (void) moveToward:(float3)destination scale:(float)scale {
@@ -804,8 +900,16 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   NSLog(@"%s: CEN@  (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
   _viewMatrix = lookAt(kEye, kCentre, kUp);
 
+  _redrawPending=TRUE;
+
 }
 
+- (void)setUpdate:(BOOL)pending {
+  NSLog(@"%s: %d", __FUNCTION__, pending);
+
+  _redrawPending=pending;
+}
+  
 - (BOOL)keyDown:(NSString *)characters keycode:(uint)keyCode{
   if ([characters isEqual:@"j"]) {
     // Toggle the journey...
@@ -838,20 +942,21 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
       _star_decay=0.0f;
     }
     NSLog(@"%s: _star_decay now %8.4f", __FUNCTION__, _star_decay);
+    _redrawPending=TRUE;
     return TRUE;
   }
   switch(keyCode) {
     case 123 : // LEFT cursor
-      [self rotateView:0.0f y:1.0f z:0.0f];
+      [self rotateSelf:0.0f y:1.0f z:0.0f];
       return TRUE;
     case 124 : // RIGHT cursor
-      [self rotateView:0.0f y:-1.0f z:0.0f];
+      [self rotateSelf:0.0f y:-1.0f z:0.0f];
       return TRUE;
     case 125 : //
-      [self rotateView:1.0f y:0.0f z:0.0f];
+      [self rotateSelf:1.0f y:0.0f z:0.0f];
       return TRUE;
     case 126 : //
-      [self rotateView:-1.0f y:0.0f z:0.0f];
+      [self rotateSelf:-1.0f y:0.0f z:0.0f];
       return TRUE;
   }
   return FALSE;
