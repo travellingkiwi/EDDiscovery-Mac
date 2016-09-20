@@ -355,7 +355,10 @@ journey_block_t *newJourneyBlock(JourneyVertex_t *point) {
     
   Jump *last=[Jump lastXYZJumpOfCommander:Commander.activeCommander];
   [_renderer setPosition:last.system.x/LY_2_MTL y:last.system.y/LY_2_MTL z:last.system.z/LY_2_MTL];
-    
+
+  // Redraw now that we have an initial position...
+  [_renderer setUpdate:TRUE];
+
   dispatch_async(dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0), ^{
       
     journey_block_t *journey=galaxy.first_journey_block;
@@ -395,6 +398,8 @@ journey_block_t *newJourneyBlock(JourneyVertex_t *point) {
   
     NSLog(@"%s: Finished loading jumps", __FUNCTION__);
 
+    [_renderer setUpdate:TRUE];
+
     // Now load the systems in the galaxy... Hmm... Wonder how long 1000000 vertices take to load...
 #ifdef DRAWGALAXY
     // To then get all the systems...
@@ -431,9 +436,11 @@ journey_block_t *newJourneyBlock(JourneyVertex_t *point) {
     }
 
     NSLog(@"%s: Galaxy Loaded %d systems into %d blocks", __FUNCTION__, galaxy.total_systems, galaxy.num_galaxy_blocks);
-      
+
+    [_renderer setUpdate:TRUE];
+
   });
-    
+  
 #endif
 }
 
