@@ -37,6 +37,8 @@ static const float4 kBoxDiffuseColors[2] = {
 };
 #endif
 
+#define DECAY_DEFAULT 200.0f
+
 #define DRAWJOURNEY
 #define DRAWGALAXY
 #define DRAWAXES
@@ -303,7 +305,7 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   _rotate_y=0.0f;
   _rotate_z=0.0f;
   
-  _star_decay=10.0f;
+  _star_decay=DECAY_DEFAULT;
   
   _redrawPending=TRUE;
   _totalRedraws=0;
@@ -943,7 +945,7 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   if ([characters isEqual:@"h"]) {
     // Toggle the star distance intensity
     if(_star_decay<0.01f) {
-      _star_decay=10.0f;
+      _star_decay=DECAY_DEFAULT;
     } else {
       _star_decay=0.0f;
     }
