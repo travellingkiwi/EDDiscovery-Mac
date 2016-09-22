@@ -94,7 +94,7 @@ static const float galactic_plane [] = {
 
 static const float kFOVY    = 65.0f;
 
-float model_scale = 0.25;
+float model_scale = 1.0;
 
 //
 static float3 kUp        = { 0.0f,  1.0f,  0.0f};
@@ -137,7 +137,7 @@ static const float4 colours[MAX_COLOUR_INDEX]= {
 #define POINT_IND_STATION 3
 #define MAX_POINT_SIZES   4
 
-static const float pointsize[MAX_POINT_SIZES]={1.0, 15.00, 20.000, 15.00};
+static const float pointsize[MAX_POINT_SIZES]={1.0, 5.00, 20.000, 15.00};
 
 #define MTL_PIPE_SIMPLELINE     0        // Simple lines - e.g. the Axes of interest
 #define MTL_PIPE_GALAXY_STAR    1        // Draws the stars in the galaxy...
@@ -713,8 +713,8 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   //constants_t *constant_buffer = (constants_t *)[_dynamicConstantBuffer[_constantDataBufferIndex] contents];
   
   //simd::float4x4 modelViewMatrix = AAPL::translate(0.0f, 0.0f, 1.5f) * AAPL::rotate(_rotation, 0.0f, 1.0f, 0.0f);
-  simd::float4x4 modelViewMatrix = AAPL::translate(kCentre[0], kCentre[1], kCentre[2]) * AAPL::rotate(0.0f, 0.0f, 1.0f, 0.0f) * scale(model_scale, model_scale, model_scale) * AAPL::translate(-kCentre[0], -kCentre[1], -kCentre[2]);
-  modelViewMatrix = baseModelViewMatrix * modelViewMatrix;
+  //simd::float4x4 modelViewMatrix = AAPL::translate(kCentre[0], kCentre[1], kCentre[2]) * AAPL::rotate(0.0f, 0.0f, 1.0f, 0.0f) * scale(model_scale, model_scale, model_scale) * AAPL::translate(-kCentre[0], -kCentre[1], -kCentre[2]);
+  simd::float4x4 modelViewMatrix = baseModelViewMatrix * scale(model_scale, model_scale, model_scale);   //* modelViewMatrix;
 
   //int i=0;
   
@@ -805,42 +805,48 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   //NSLog(@"%s: (%8.4f %8.4f %8.4f)", __FUNCTION__, x, y, z);
   
 #if 1
-  NSLog(@"%s: Rotate     (%8.4f %8.4f %8.4f)", __FUNCTION__, x, y, z);
-  NSLog(@"%s: kUp        (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
-  NSLog(@"%s: kEye       (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
-  NSLog(@"%s: Centre     (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
-  NSLog(@"%s: kEyeOffset [%8.4f %8.4f %8.4f]", __FUNCTION__, kEyeOffset.x, kEyeOffset.y, kEyeOffset.z);
+  NSLog(@"%s: original Rotate     (%8.4f %8.4f %8.4f)", __FUNCTION__, x, y, z);
+  NSLog(@"%s: original kUp        (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
+  NSLog(@"%s: original kCentre    (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
+  NSLog(@"%s: original kEyeOffset [%8.4f %8.4f %8.4f]", __FUNCTION__, kEyeOffset.x, kEyeOffset.y, kEyeOffset.z);
+  NSLog(@"%s: original kEye       (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
 
 #endif
   
-  simd::float4x4 transformMatrix=AAPL::translate(kEye.x, kEye.y, kEye.z) * AAPL::rotate(-x, -y, -z) * AAPL::translate(-kEye.x, -kEye.y, -kEye.z);
+  //simd::float4x4 transformMatrix=AAPL::translate(kEye.x, kEye.y, kEye.z) * AAPL::rotate(-x, -y, -z) * AAPL::translate(-kEye.x, -kEye.y, -kEye.z);
+  //simd::float4x4 transformMatrix=AAPL::rotate(x, y, z);
+  simd::float4 mCentre={kCentre.x-kEye.x, kCentre.y-kEye.y, kCentre.z-kEye.z, 1.0f};
+  simd::float4 mCtrEffective=mCentre*AAPL::rotate(x, y, z);
   
-  simd::float4 mCentre={kCentre.x, kCentre.y, kCentre.z, 1.0f};
-  simd::float4 mCtrEffective=mCentre*transformMatrix;
-  
+  NSLog(@"%s: mCentre             (%8.4f %8.4f %8.4f)", __FUNCTION__, mCentre.x, mCentre.y, mCentre.z);
+  NSLog(@"%s: mCtrEffective       (%8.4f %8.4f %8.4f)", __FUNCTION__, mCtrEffective.x, mCtrEffective.y, mCtrEffective.z);
+
   // The Up direction is simply rotatated... No translation required.
   //simd::float4 mUp={kUp.x, kUp.y, kUp.z, 1.0f};
   //simd::float4 mUpEffective=mUp*rotateMatrix;
   
-  kCentre.x=mCtrEffective.x;
-  kCentre.y=mCtrEffective.y;
-  kCentre.z=mCtrEffective.z;
+  kCentre.x=mCtrEffective.x+kEye.x;
+  kCentre.y=mCtrEffective.y+kEye.y;
+  kCentre.z=mCtrEffective.z+kEye.z;
   
   //kUp.x=mUpEffective.x;
   //kUp.y=mUpEffective.y;
   //kUp.z=mUpEffective.z;
   
+  
+  kEyeOffset.x=kEye.x-kCentre.x;
+  kEyeOffset.y=kEye.y-kCentre.y;
+  kEyeOffset.z=kEye.z-kCentre.z;
+  
+  // eye = centre + offset
+
   _viewMatrix = lookAt(kEye, kCentre, kUp);
-  
-  kEyeOffset.x=kCentre.x-kEye.x;
-  kEyeOffset.y=kCentre.y-kEye.y;
-  kEyeOffset.z=kCentre.z-kEye.z;
-  
+
 #if 1
-  NSLog(@"%s: rotated kUp        (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
-  NSLog(@"%s: rotated kEye       (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
-  NSLog(@"%s: rotated kCentre    (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
-  NSLog(@"%s: rotated kEyeOffset [%8.4f %8.4f %8.4f]", __FUNCTION__, kEyeOffset.x, kEyeOffset.y, kEyeOffset.z);
+  NSLog(@"%s: rotated  kUp        (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
+  NSLog(@"%s: rotated  kCentre    (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
+  NSLog(@"%s: rotated  kEyeOffset [%8.4f %8.4f %8.4f]", __FUNCTION__, kEyeOffset.x, kEyeOffset.y, kEyeOffset.z);
+  NSLog(@"%s: rotated  kEye       (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
 #endif
   
   
