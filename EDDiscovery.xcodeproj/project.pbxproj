@@ -869,11 +869,7 @@
 				CODE_SIGN_IDENTITY = "Developer ID Application";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer";
 				COMBINE_HIDPI_IMAGES = YES;
-<<<<<<< HEAD
 				DEVELOPMENT_TEAM = 268BYE4QSM;
-=======
-				DEVELOPMENT_TEAM = DC5EHBMJ4B;
->>>>>>> 51529be1de9820d9298565e245e1c2067edee748
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/EDDiscovery",
