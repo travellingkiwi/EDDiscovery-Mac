@@ -133,6 +133,86 @@ static const float4 colours[MAX_COLOUR_INDEX]= {
   
 };
 
+#define DIVISOR  50.0f
+
+#define ISOVERTS 12
+
+// 0  b -a (5)   b  a  0 (8)  -b  a  0 (9)
+// 0  b  a (4)  -b  a  0 (9)   b  a  0 (8)
+// 0  b  a (4)   0 -b  a (6)  -a  0  b (0)
+// 0  b  a (4)   a  0  b (1)   0 -b  a (6)
+// 0  b -a (5)   0 -b -a (7)   a  0 -b (3)
+// 0  b -a (5)  -a  0 -b (2)   0 -b -a (7)
+// 0 -b  a (6)   b -a  0 (10) -b -a  0 (11)
+// 0 -b -a (7)  -b -a  0 (11)  b -a  0 (10)
+//-b  a  0 (9)  -a  0  b (0)  -a  0 -b (2)
+//-b -a  0 (11) -a  0 -b (2)  -a  0  b (0)
+// b  a  0 (8)   a  0 -b (3)   a  0  b (1)
+// b -a  0 (10)  a  0  b (1)   a  0 -b (3)
+// 0  b  a (4)  -a  0  b (0)  -b  a  0 (9)
+// 0  b  a (4)   b  a  0 (8)   a  0  b (1)
+// 0  b -a (5)  -b  a  0 (9)  -a  0 -b (2)
+// 0  b -a (5)   a  0 -b (3)   b  a  0 (8)
+// 0 -b -a (7)  -a  0 -b (2)  -b -a  0 (11)
+// 0 -b -a (7)   b -a  0 (10)  a  0 -b (3)
+// 0 -b  a (6)  -b -a  0 (11) -a  0  b (0)
+// 0 -b  a (6)   a  0  b (1)   b -a  0 (10)
+//
+//Where a = 1 / 2 and b = 1 / (2 * phi)
+//phi is the golden ratio = (1 + sqrt(5)) / 2
+
+// Geometry based on Paul Bourke's excellent article:
+//   Platonic Solids (Regular polytopes in 3D)
+//   http://astronomy.swin.edu.au/~pbourke/polyhedra/platonic/
+const float sqrt5 = sqrt (5.0f);
+const float phi = (1.0f + sqrt5) * 0.5f; // "golden ratio"
+                                         // ratio of edge length to radius
+const float radius=0.01f;
+const float ratio = sqrt (10.0f + (2.0f * sqrt5)) / (4.0f * phi);
+const float a = (radius / ratio) * 0.5;
+const float b = (radius / ratio) / (2.0f * phi);
+
+static float3 pb_vdata_simple[ISOVERTS+1] = {
+// define the icosahedron's 12 vertices:
+  { 0.0f,  0.0f,  0.0f},
+  { 0.0f,    b ,   -a },
+  {   b ,    a ,  0.0f},
+  {  -b ,    a ,  0.0f},
+  { 0.0f,    b ,    a },
+  { 0.0f,   -b ,    a },
+  {  -a ,  0.0f,    b },
+  { 0.0f,   -b ,   -a },
+  {   a ,  0.0f,   -b },
+  {   a ,  0.0f,    b },
+  {  -a ,  0.0f,   -b },
+  {   b ,   -a ,  0.0f},
+  {  -b ,   -a ,  0.0f},
+};
+
+static UInt16 pb_icos_tri[20][3] = {
+  // draw the icosahedron's 20 triangular faces:
+  { 1,  2,  3},
+  { 4,  3,  2},
+  { 4,  5,  6},
+  { 4,  9,  5},
+  { 1,  7,  8},
+  { 1, 10,  7},
+  { 5, 11, 12},
+  { 7, 12, 11},
+  { 3,  6, 10},
+  { 12, 6, 10},
+  { 2,  8,  9},
+  {11,  9,  8},
+  { 4,  6,  3},
+  { 4,  2,  9},
+  { 1,  3, 10},
+  { 1,  8,  2},
+  { 7, 10, 12},
+  { 7, 11,  8},
+  { 5, 12,  6},
+  { 5,  9, 11},
+};
+
 #define POINT_IND_DEFAULT 0
 #define POINT_IND_JSTAR   1
 #define POINT_IND_BLINE   2
@@ -147,7 +227,9 @@ static const float pointsize[MAX_POINT_SIZES]={1.0, 5.00, 20.000, 15.00};
 #define MTL_PIPE_JOURNEY        3        // Draws the journey itself
 #define MTL_PIPE_STATION        4        // Draws the journey itself
 #define MTL_PIPE_GALACTIC_PLANE 5
-#define MTL_PIPE_COUNT          6        // Number of metal pipelines to have defined
+#define MTL_PIPE_SPHERE         6
+#define MTL_PIPE_SPHERE_SIMPLE  7
+#define MTL_PIPE_COUNT          8        // Number of metal pipelines to have defined
 
 typedef struct mtl_pipe_s {
   const char *name;
@@ -164,6 +246,8 @@ static const mtl_pipe_t mtl_pipe[MTL_PIPE_COUNT]={
   {"Journey Path", "journey_path_vertex", "journey_star_frag", NULL, NULL},
   {"Station", "galaxy_star_vertex", "galaxy_star_frag", NULL, NULL},
   {"Galactic Plane", "galactic_plane_vertex", "galactic_plane_frag", NULL, NULL},
+  {"Sphere", "sphere_vertex", "sphere_frag", NULL, NULL},
+  {"Sphere Simple", "sphere_simple_vertex", "sphere_frag", NULL, NULL},
   //  {"Galactic Grid", "galactic_grid_vertex", "gatactic_grid_frag", NULL, NULL},
   
 };
@@ -179,6 +263,12 @@ static const mtl_pipe_t mtl_pipe[MTL_PIPE_COUNT]={
   id <MTLLibrary> _defaultLibrary;
   id <MTLRenderPipelineState> _pipelineState[MTL_PIPE_COUNT];
   id <MTLDepthStencilState> _depthState;
+
+  // Buffers
+  id <MTLBuffer> _sol_axesBuffer;
+  id <MTLBuffer> _gal_axesBuffer;
+  id <MTLBuffer> _sphere_pb_vertexBuffer;
+  id <MTLBuffer> _sphere_pb_indexBuffer;
 
   // globals used in update calculation
   float4x4 _projectionMatrix;
@@ -253,6 +343,34 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
     y += (g->advance.y/64) * sy;
   }
 }
+
+void subdivide(float u1[2], float u2[2], float u3[2],
+               float cutoff, long depth)
+{
+  GLfloat v1[3], v2[3], v3[3], n1[3], n2[3], n3[3];
+  GLfloat u12[2], u23[2], u32[2];
+  GLint i;
+  
+  if (depth == maxdepth || (curv(u1) < cutoff &&
+                            curv(u2) < cutoff && curv(u3) < cutoff)) {
+    surf(u1, v1, n1); surf(u2, v2, n2); surf(u3, v3, n3);
+    glBegin(GL_POLYGON);
+    glNormal3fv(n1); glVertex3fv(v1);
+    glNormal3fv(n2); glVertex3fv(v2);
+    glNormal3fv(n3); glVertex3fv(v3);
+    glEnd();
+    return;
+  }
+  for (i = 0; i < 2; i++) {
+    u12[i] = (u1[i] + u2[i])/2.0;
+    u23[i] = (u2[i] + u3[i])/2.0;
+    u31[i] = (u3[i] + u1[i])/2.0;
+  }
+  subdivide(u1, u12, u31, cutoff, depth+1);
+  subdivide(u2, u23, u12, cutoff, depth+1);
+  subdivide(u3, u31, u23, cutoff, depth+1);
+  subdivide(u12, u23, u31, cutoff, depth+1);
+}
 #endif
 
 //- (void)setConstatBuffer {
@@ -277,7 +395,7 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   //kEye[1]=kCentre[1]+(START_EYE_Y/LY_2_MTL);
   //kEye[2]=kCentre[2]+(START_EYE_Z/LY_2_MTL);
   
-  [self rotateView:0.0f y:0.0f z:0.0f];
+  //[self rotateView:0.0f y:0.0f z:0.0f];
 
   //[self setConstatBuffer];
 
@@ -286,6 +404,7 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   NSLog(@"%s: kCentre    set [%8.4f %8.4f %8.4f]", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
   NSLog(@"%s: kEyeOffset set [%8.4f %8.4f %8.4f]", __FUNCTION__, kEyeOffset.x, kEyeOffset.y, kEyeOffset.z);
   
+  _redrawPending=TRUE;
 }
 
 - (instancetype)init {
@@ -346,6 +465,12 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
     assert(0);
   }
   
+  if(![self prepareBuffers]) {
+    NSLog(@"ERROR: Couldn't prepare the vertex buffers");
+    
+    //
+    assert(0);
+  }
   MTLDepthStencilDescriptor *depthStateDesc = [[MTLDepthStencilDescriptor alloc] init];
   depthStateDesc.depthCompareFunction = MTLCompareFunctionLess;
   depthStateDesc.depthWriteEnabled = YES;
@@ -382,7 +507,7 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
 - (BOOL)preparePipelineState:(ThreeDMapView *)view {
 
   for (int i=0; i<MTL_PIPE_COUNT; i++) {
-    NSLog(@"%s: PREPARING PIPELINE [%d]", __FUNCTION__, i);
+    NSLog(@"%s: PREPARING PIPELINE [%d] %s", __FUNCTION__, i, mtl_pipe[i].name);
 
     id <MTLFunction> vertexProgram=[_defaultLibrary newFunctionWithName:[NSString stringWithUTF8String:mtl_pipe[i].vertex_prog_name]];
     if(!vertexProgram) {
@@ -430,18 +555,77 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   return YES;
 }
 
+- (BOOL) prepareBuffers {
+  NSLog(@"%s: SIZES float3 %lu float %lu UInt16 %lu", __FUNCTION__, sizeof(float3), sizeof(float), sizeof(UInt16));
+  _sol_axesBuffer = [_device newBufferWithBytes:sol_axes length:sizeof(gal_axes) options:MTLResourceOptionCPUCacheModeDefault];
+  _sol_axesBuffer.label = @"SolAxes";
+  
+  _gal_axesBuffer = [_device newBufferWithBytes:gal_axes length:sizeof(gal_axes) options:MTLResourceOptionCPUCacheModeDefault];
+  _gal_axesBuffer.label = @"GalAxes";
+  
+  _sphere_pb_vertexBuffer= [_device newBufferWithBytes:pb_vdata_simple length:sizeof(float3)*13 options:MTLResourceOptionCPUCacheModeDefault];
+  _sphere_pb_vertexBuffer.label = @"JStar PB Vertices";
+  _sphere_pb_indexBuffer = [_device newBufferWithBytes:pb_icos_tri length:sizeof(unsigned short)*3*20 options:MTLResourceOptionCPUCacheModeDefault];
+  _sphere_pb_indexBuffer.label = @"JStar PB Index";
+
+  return YES;
+}
+
+- (void)strip4Sphere:(float4 *)strip resolution:(float)resolution {
+  float Long, Lat;
+  
+#if 0
+  glBegin(GL_TRIANGLE_STRIP);
+  //  glBegin(GL_LINE_STRIP);
+  glVertex3f(0.0, 0.0, -10.0);
+  for(Long = 0.0; Long<360.0; Long += resolution){
+    for(Lat = -80; Lat<90; Lat += resolution/2.0f){
+      if((int)Lat % 20) glColor3fv(color[0]);
+      else glColor3fv(color[1]);
+      cartesian(Long, Lat);
+      glVertex3fv(cart);
+      cartesian(Long+10.0, Lat);
+      glVertex3fv(cart);
+    }
+    glVertex3f(0.0, 0.0, 10.0);
+    for(Lat = 80; Lat> -90; Lat -= resolution/2.0f) {
+      if((int)Lat % 20) glColor3fv(color[2]);
+      else glColor3fv(color[3]);
+      cartesian(Long +10.1, Lat);
+      glVertex3fv(cart);
+      cartesian(Long+20.0-0.1, Lat);
+      glVertex3fv(cart);
+    }
+    glVertex3f(0.0, 0.0, -10.0);
+  }
+  glEnd();
+  glFlush();
+#endif
+  
+}
+
 #pragma mark Render
 
 - (void)render:(ThreeDMapView *)view {
   _totalRedraws++;
   
   // If we're not pending a redraw, just return...
+#if 0
   if(! _redrawPending) {
     // Avoiding the redraw so increment...
     _avoidRedraws++;
     return;
   }
   NSLog(@"%s: _totalRedraws %llu _avoidedRedraw %llu _actualRedraw %llu", __FUNCTION__, _totalRedraws, _avoidRedraws, _actualRedraws);
+#endif
+#ifdef DEBUG_RENDER
+  //NSLog(@"%s: Rotate     (%8.4f %8.4f %8.4f) now (%8.4f %8.4f %8.4f)", __FUNCTION__, x, y, z, _rotate_x, _rotate_y, _rotate_z);
+  NSLog(@"%s: kUp        (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
+  NSLog(@"%s: kEye       (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
+  NSLog(@"%s: kCentre    (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
+  NSLog(@"%s: kEyeOffset [%8.4f %8.4f %8.4f]", __FUNCTION__, kEyeOffset.x, kEyeOffset.y, kEyeOffset.z);
+  
+#endif
 
   // Allow the renderer to preflight 3 frames on the CPU (using a semapore as a guard) and commit them to the GPU.
   // This semaphore will get signaled once the GPU completes a frame's work via addCompletedHandler callback below,
@@ -468,29 +652,20 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
 #ifdef DRAWAXES
   // Draw the axes....
   [renderEncoder pushDebugGroup:@"Axes"];
-  
-  id <MTLBuffer> _sol_axesBuffer;
-  _sol_axesBuffer = [_device newBufferWithBytes:sol_axes length:sizeof(gal_axes) options:MTLResourceOptionCPUCacheModeDefault];
-  _sol_axesBuffer.label = @"SolAxes";
     
   //  set vertex buffer for each journey segment
   [renderEncoder setVertexBuffer:_sol_axesBuffer offset:0 atIndex:0 ];
   [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
   [renderEncoder setVertexBytes:&colours[COLOUR_IND_AXES_SOL] length:sizeof(float4) atIndex:2 ];
   [renderEncoder setVertexBytes:&pointsize[POINT_IND_DEFAULT] length:sizeof(float) atIndex:3 ];
-    
   [renderEncoder drawPrimitives:MTLPrimitiveTypeLine vertexStart:0 vertexCount:6];
   
-  id <MTLBuffer> _gal_axesBuffer;
-  _gal_axesBuffer = [_device newBufferWithBytes:gal_axes length:sizeof(gal_axes) options:MTLResourceOptionCPUCacheModeDefault];
-  _gal_axesBuffer.label = @"GalAxes";
     
   //  set vertex buffer for each journey segment
   [renderEncoder setVertexBuffer:_gal_axesBuffer offset:0 atIndex:0 ];
   [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
   [renderEncoder setVertexBytes:&colours[COLOUR_IND_AXES_SAG] length:sizeof(float4) atIndex:2 ];
   [renderEncoder setVertexBytes:&pointsize[POINT_IND_DEFAULT] length:sizeof(float) atIndex:3 ];
-
   [renderEncoder drawPrimitives:MTLPrimitiveTypeLine vertexStart:0 vertexCount:6];
 
   [renderEncoder popDebugGroup];
@@ -605,21 +780,63 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
     // Slightly fuzzy would be nice too...
     journey_block_t *jb=thisGalaxy->first_journey_block;
     while (jb!=NULL) {
+
+#if 0
       id <MTLBuffer> _vertexBuffer;
-      
+
+      [renderEncoder setRenderPipelineState:_pipelineState[MTL_PIPE_JOURNEY_STAR]];
+
       _vertexBuffer = [_device newBufferWithBytes:jb->systems length:sizeof(JourneyVertex_t)*jb->numsystems options:MTLResourceOptionCPUCacheModeDefault];
       _vertexBuffer.label = @"JStars Vertices";
-      
-      //  set vertex buffer for each journey segment
+
+      //  set vertex buffer for each journey star
       [renderEncoder setVertexBuffer:_vertexBuffer offset:0 atIndex:0 ];
       [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
       [renderEncoder setVertexBytes:&colours[COLOUR_IND_JSTAR] length:sizeof(float4) atIndex:2 ];
       float starSize=MIN(pointsize[POINT_IND_JSTAR]*(model_scale/POINT_SCALE), 10.0f);
       [renderEncoder setVertexBytes:&starSize length:sizeof(float) atIndex:3 ];
-
       // tell the render context we want to draw our primitives
       [renderEncoder drawPrimitives:MTLPrimitiveTypePoint vertexStart:0 vertexCount:jb->numsystems ];
+#endif
+      
+      [renderEncoder setRenderPipelineState:_pipelineState[MTL_PIPE_SPHERE_SIMPLE]];
+      [renderEncoder setCullMode:MTLCullModeNone];
+      // Draw each star individually...
+      for (int i=0; i<jb->numsystems; i++) {
+      //for (int i=0; i<1; i++) {
 
+        //  set vertex buffer for each journey star
+        [renderEncoder setVertexBuffer:_sphere_pb_vertexBuffer offset:0 atIndex:0 ];
+        [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
+        [renderEncoder setVertexBytes:&colours[COLOUR_IND_JSTAR] length:sizeof(float4) atIndex:2 ];
+        [renderEncoder setVertexBytes:&_star_decay length:sizeof(float) atIndex:3 ];
+        [renderEncoder setVertexBytes:&jb->systems[i].posx length:sizeof(float3) atIndex:4 ];
+
+        //NSLog(@"%s: render system %d (%8.4f %8.4f %8.4f)", __FUNCTION__, i, jb->systems[i].posx, jb->systems[i].posy, jb->systems[i].posz);
+        // tell the render context we want to draw our primitives
+        [renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
+                                  indexCount:3*20
+                                   indexType:MTLIndexTypeUInt16
+                                 indexBuffer:_sphere_pb_indexBuffer
+                           indexBufferOffset:0
+                               instanceCount:1];
+        
+#if 1
+        //[renderEncoder setRenderPipelineState:_pipelineState[MTL_PIPE_SIMPLELINE]];
+
+        [renderEncoder setVertexBuffer:_sphere_pb_vertexBuffer offset:0 atIndex:0 ];
+        [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
+        [renderEncoder setVertexBytes:&colours[COLOUR_IND_AXES_SAG] length:sizeof(float4) atIndex:2 ];
+        [renderEncoder setVertexBytes:&_star_decay length:sizeof(float) atIndex:3 ];
+        [renderEncoder setVertexBytes:&jb->systems[i].posx length:sizeof(float3) atIndex:4 ];
+        [renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
+                                  indexCount:3*20
+                                   indexType:MTLIndexTypeUInt16
+                                 indexBuffer:_sphere_pb_indexBuffer
+                           indexBufferOffset:0
+                               instanceCount:1];
+#endif
+      }
       jb=jb->next;
     }
 
@@ -692,11 +909,11 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   _projectionMatrix = perspective_fov(kFOVY, aspect, 0.1f, 100.0f);
   _viewMatrix = lookAt(kEye, kCentre, kUp);
   
-#if 0
-  NSLog(@"%s: reshaped kUp        (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
-  NSLog(@"%s: reshaped kEye       (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
-  NSLog(@"%s: reshaped kCentre    (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
-  NSLog(@"%s: reshaped kEyeOffset [%8.4f %8.4f %8.4f]", __FUNCTION__, kEyeOffset.x, kEyeOffset.y, kEyeOffset.z);
+#if 1
+  NSLog(@"%s: kUp        (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
+  NSLog(@"%s: kEye       (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
+  NSLog(@"%s: kCentre    (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
+  NSLog(@"%s: kEyeOffset [%8.4f %8.4f %8.4f]", __FUNCTION__, kEyeOffset.x, kEyeOffset.y, kEyeOffset.z);
 
 #endif
   
@@ -750,41 +967,83 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
 //
 - (void)rotateView:(float)x y:(float)y z:(float)z {
   //NSLog(@"%s: (%8.4f %8.4f %8.4f)", __FUNCTION__, x, y, z);
- 
-  _rotate_x-=x;
-  _rotate_y-=y;
-  _rotate_z-=z;
-  
-  // Rotate universe needs to actually rotate the VIEWpoint (i.e. eye location)
-  // translate back to centre@(0,0,0), rotate by (x,y.z), translate back...
-#if 1
-  NSLog(@"%s: Rotate     (%8.4f %8.4f %8.4f) now (%8.4f %8.4f %8.4f)", __FUNCTION__, x, y, z, _rotate_x, _rotate_y, _rotate_z);
-  NSLog(@"%s: kUp        (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
-  NSLog(@"%s: kEye       (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
-  NSLog(@"%s: Centre     (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
-  NSLog(@"%s: kEyeOffset [%8.4f %8.4f %8.4f]", __FUNCTION__, kEyeOffset.x, kEyeOffset.y, kEyeOffset.z);
 
+
+
+  // Invert the y rotation...
+  //y*=-1.0f;
+  _rotate_x+=x;
+  _rotate_y+=y;
+  _rotate_z+=z;
+
+#if 1
+  //NSLog(@"%s: Rotate     (%8.4f %8.4f %8.4f) now (%8.4f %8.4f %8.4f)", __FUNCTION__, x, y, z, _rotate_x, _rotate_y, _rotate_z);
+  NSLog(@"%s: B4 Increment  (%8.4f %8.4f %8.4f)", __FUNCTION__, x, y, z);
+  NSLog(@"%s: B4 Rotate     (%8.4f %8.4f %8.4f)", __FUNCTION__, _rotate_x, _rotate_y, _rotate_z);
+  NSLog(@"%s: B4 kUp        (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
+  NSLog(@"%s: B4 kEye       (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
+  NSLog(@"%s: B4 kCentre    (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
+  NSLog(@"%s: B4 kEyeOffset [%8.4f %8.4f %8.4f]", __FUNCTION__, kEyeOffset.x, kEyeOffset.y, kEyeOffset.z);
 #endif
   
-  simd::float4x4 rotateMatrix=AAPL::rotate(_rotate_x, _rotate_y, _rotate_z);
+  float dx=kEye.x-kCentre.x;
+  float dy=kEye.y-kCentre.y;
+  float dz=kEye.z-kCentre.z;
+  
+  NSLog(@"%s: dx dy dz [%8.4f %8.4f %8.4f]", __FUNCTION__, dx, dy, dz);
+  
+  float hcube=dx*dx+dy*dy+dz*dz;
+  float h=sqrtf(hcube);
 
-  simd::float4 mEye={kEyeOffset.x, kEyeOffset.y, kEyeOffset.z, 1.0f};
+  NSLog(@"%s: hcube %8.4f h %8.4f", __FUNCTION__, hcube, h);
+
+  float normx=acosf(dx/h);
+  float normy=acosf(dy/h);
+  float normz=acosf(dz/h);
+
+  NSLog(@"%s: normx %8.4f normy %8.4f normz %8.4f", __FUNCTION__, normx, normy, normz);
+
+  simd::float4x4 normrot=AAPL::rotate(normx, normy, normz);
+  simd::float4x4 revrot=AAPL::rotate(-normx, -normy, -normz);
+  
+  
+  simd::float4 mOffset={kEyeOffset.x, kEyeOffset.y, kEyeOffset.z, 1.0f};
+  simd::float4 effOffset=mOffset*normrot*AAPL::rotate(_rotate_x, _rotate_y, _rotate_z)*revrot;
+  
+  kCentre.x=effOffset.x;
+  kCentre.y=effOffset.y;
+  kCentre.z=effOffset.z;
+  
+#if 1
+  //NSLog(@"%s: Rotate     (%8.4f %8.4f %8.4f) now (%8.4f %8.4f %8.4f)", __FUNCTION__, x, y, z, _rotate_x, _rotate_y, _rotate_z);
+  NSLog(@"%s: AF Increment  (%8.4f %8.4f %8.4f)", __FUNCTION__, x, y, z);
+  NSLog(@"%s: AF Rotate     (%8.4f %8.4f %8.4f)", __FUNCTION__, _rotate_x, _rotate_y, _rotate_z);
+  NSLog(@"%s: AF kUp        (%8.4f %8.4f %8.4f)", __FUNCTION__, kUp.x, kUp.y, kUp.z);
+  NSLog(@"%s: AF kEye       (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
+  NSLog(@"%s: AF kCentre    (%8.4f %8.4f %8.4f)", __FUNCTION__, kCentre.x, kCentre.y, kCentre.z);
+  NSLog(@"%s: AF kEyeOffset [%8.4f %8.4f %8.4f]", __FUNCTION__, kEyeOffset.x, kEyeOffset.y, kEyeOffset.z);
+#endif
+  
+#if 0
+  //simd::float4x4 rotateMatrix=AAPL::rotate(_rotate_x, _rotate_y, _rotate_z);
+  simd::float4x4 rotateMatrix=AAPL::rotate(x, y, z);
+
+  simd::float4 mEye={kEye.x-kCentre.x, kEye.y-kCentre.y, kEye.z-kCentre.z, 1.0f};
   simd::float4 mEyeEffective=mEye*rotateMatrix;
 
   // The Up direction is simply rotatated... No translation required.
-  //simd::float4 mUp={kUp.x, kUp.y, kUp.z, 1.0f};
-  //simd::float4 mUpEffective=mUp*rotateMatrix;
+  simd::float4 mUp={kUp.x, kUp.y, kUp.z, 1.0f};
+  simd::float4 mUpEffective=mUp*rotateMatrix;
   
-  //  kEyeOffset.x=mEyeEffective.x;
-  //  kEyeOffset.y=mEyeEffective.y;
-  //  kEyeOffset.z=mEyeEffective.z;
+ 
   kEye.x=mEyeEffective.x+kCentre.x;
   kEye.y=mEyeEffective.y+kCentre.y;
   kEye.z=mEyeEffective.z+kCentre.z;
   
-  //kUp.x=mUpEffective.x;
-  //kUp.y=mUpEffective.y;
-  //kUp.z=mUpEffective.z;
+  kUp.x=mUpEffective.x;
+  kUp.y=mUpEffective.y;
+  kUp.z=mUpEffective.z;
+#endif
   
   _viewMatrix = lookAt(kEye, kCentre, kUp);
 
@@ -814,7 +1073,8 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   NSLog(@"%s: original kEye       (%8.4f %8.4f %8.4f)", __FUNCTION__, kEye.x, kEye.y, kEye.z);
 
 #endif
-  
+
+#if 1
   //simd::float4x4 transformMatrix=AAPL::translate(kEye.x, kEye.y, kEye.z) * AAPL::rotate(-x, -y, -z) * AAPL::translate(-kEye.x, -kEye.y, -kEye.z);
   //simd::float4x4 transformMatrix=AAPL::rotate(x, y, z);
   simd::float4 mCentre={kCentre.x-kEye.x, kCentre.y-kEye.y, kCentre.z-kEye.z, 1.0f};
@@ -841,7 +1101,8 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   kEyeOffset.z=kEye.z-kCentre.z;
   
   // eye = centre + offset
-
+#endif
+  
   _viewMatrix = lookAt(kEye, kCentre, kUp);
 
 #if 1
@@ -940,6 +1201,14 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
   }
   if ([characters isEqual:@"]"]) {
     [self moveToward:kCentre scale:-0.05];
+    return TRUE;
+  }
+  if ([characters isEqual:@","]) {
+    [self rotateView:0.0f y:1.0f z:0.0f];
+    return TRUE;
+  }
+  if ([characters isEqual:@"."]) {
+    [self rotateView:0.0f y:-1.0f z:0.0f];
     return TRUE;
   }
   if ([characters isEqual:@"h"]) {
