@@ -21,6 +21,10 @@
       mainContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
       
       [mainContext setPersistentStoreCoordinator:coordinator];
+    
+      NSLog(@"Set mainContext.undoManager=nil");
+      mainContext.undoManager = nil;
+
     }
   }
   
@@ -34,6 +38,8 @@
     workContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
     
     workContext.parentContext = self.mainContext;
+    NSLog(@"Set workContext.undoManager=nil");
+    workContext.undoManager = nil;
   }
   
   return workContext;

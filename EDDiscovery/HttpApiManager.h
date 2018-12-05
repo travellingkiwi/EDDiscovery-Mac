@@ -9,7 +9,7 @@
 #import <Cocoa/Cocoa.h>
 
 #ifdef DEBUG
-//#define HTTP_API_MANAGER_DEBUG
+#define HTTP_API_MANAGER_DEBUG
 #endif
 
 #define BOUNDARY_TAG (@"WebKitFormBoundaryHttpApiManager")

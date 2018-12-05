@@ -55,6 +55,7 @@
   
   LoadingViewController.textField.stringValue = NSLocalizedString(@"Syncing jumps with EDSM", @"");
   
+  NSLog(@"EDSM:getJumpsForCommander");
   [EDSMConnection getJumpsForCommander:self.commander
                               response:^(NSArray *travelLogs, NSError *connectionError) {
                                 
@@ -145,7 +146,9 @@
                                   
                                   NSPredicate  *predicate   = [NSPredicate predicateWithFormat:@"edsm == nil"];
                                   NSOrderedSet *jumpsToSend = [[NSOrderedSet orderedSetWithArray:allJumps] filteredOrderedSetUsingPredicate:predicate];
-                                  
+  
+                                  NSLog(@"EDSM:getJumpsForCommander sending jumps to EDSM");
+
                                   [edsm sendJumpsToEDSM:jumpsToSend response:^{
                                     //print some stats to log window
                                     
@@ -163,6 +166,9 @@
                                   }];
                                 }];
                               }];
+  
+  NSLog(@"EDSM:getJumpsForCommander finished");
+
 }
 
 - (void)parseJumpsFromEDSM:(NSArray *)jumps {
@@ -255,12 +261,15 @@
       progress++;
 
       if ((progress % 100) == 0 && progress != 0) {
-        [EventLogger addLog:[NSString stringWithFormat:@"%ld / %ld jumps sent...", progress, count]];
+        NSLog(@"%ld / %ld jumps sent...", progress, count);
+        [MAIN_CONTEXT performBlock:^{
+          [EventLogger addLog:[NSString stringWithFormat:@"%ld / %ld jumps sent...", progress, count]];
+        }];
       }
       
       [MAIN_CONTEXT performBlock:^{
         NSLog(@"progress: %.0f%%", (double)progress / (double)count * (double)100);
-        
+      
         LoadingViewController.progressIndicator.doubleValue = progress;
       }];
       

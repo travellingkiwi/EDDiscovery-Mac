@@ -179,7 +179,7 @@ vertex ColorInOut sphere_simple_vertex(device vertex_simple_t* vertex_array [[ b
                                 constant AAPL::constants_t& constants [[ buffer(1) ]],
                                 constant float4 *colour,
                                 constant float *decay,
-                                device float3 *offset,
+                                constant float3 *offset,
                                 unsigned int vid [[ vertex_id ]]) {
   ColorInOut out;
   

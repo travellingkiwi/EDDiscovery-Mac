@@ -167,9 +167,9 @@ progressCallBack:^(long long downloaded, long long total) {
   if (progress != nil) {
 #warning FIXME: making assumptions on nightly dump file size!
     //EDSM does not return expected content size of nightly dumps
-    //assume a size of 350 MB
+    //assume a size of 340 GB
     
-    total = 1024 * 1024 * 350;
+    total = 1024 * 1024 * 340;
   
     progress(downloaded, MAX(downloaded,total));
   }
@@ -228,11 +228,11 @@ responseCallback:^(id output, NSError *error) {
     }];
   }
   else {
-    //perform delta queries in batches of 1 days
+    //perform delta queries in batches of 28 days
     
     NSDateComponents *dayComponent = [[NSDateComponents alloc] init];
     
-    dayComponent.day = 1;
+    dayComponent.day = 28;
     
     NSCalendar         *calendar    = [NSCalendar currentCalendar];
     NSDate             *fromDate    = lastSyncDate;
@@ -249,12 +249,16 @@ responseCallback:^(id output, NSError *error) {
           long long myTotal      = numRequests + numDone;
           long long currProgress = numDone;
           
+          //NSLog(@"progressBlock currProgress %ll myTotal %ll", (unsigned long)currProgress, (unsigned long)myTotal);
+
           progress(currProgress, myTotal);
         }
       }
     };
     
     void (^responseBlock)(NSArray *, NSError *) = ^void(NSArray *output, NSError *err) {
+      NSLog(@"updateSystemsFromEDSM::response");
+
       @synchronized (self.class) {
         if (err != nil) {
           error = err;
@@ -265,6 +269,8 @@ responseCallback:^(id output, NSError *error) {
         
         numRequests--;
         numDone++;
+        
+        NSLog(@"responseBlock numRequests %lu numDone %lu", (unsigned long)numRequests, (unsigned long)numDone);
         
         if (progress != nil) {
           long long myTotal      = numRequests + numDone;
@@ -298,6 +304,7 @@ responseCallback:^(id output, NSError *error) {
       
       fromDate = toDate;
       toDate   = [calendar dateByAddingComponents:dayComponent toDate:fromDate options:0];
+    
     }
     
     if (toDate.timeIntervalSinceReferenceDate > currDate.timeIntervalSinceReferenceDate) {
@@ -363,6 +370,8 @@ responseCallback:^(id output, NSError *error) {
 + (void)getJumpsForCommander:(Commander *)commander response:(void(^)(NSArray *jumps, NSError *error))response {
   NSDate *lastSyncDate = nil;
   
+  NSLog(@"getJumpsForCommander: Commander %@", commander.name);
+
   if (commander.edsmAccount.jumpsUpdateTimestamp != 0) {
     lastSyncDate = [NSDate dateWithTimeIntervalSinceReferenceDate:commander.edsmAccount.jumpsUpdateTimestamp];
   }
@@ -372,60 +381,100 @@ responseCallback:^(id output, NSError *error) {
   formatter.timeZone   = [NSTimeZone timeZoneWithAbbreviation:@"UTC"];
   formatter.dateFormat = @"yyyy-MM-dd HH:mm:ss";
   
-  NSString *from = [formatter stringFromDate:lastSyncDate];
+  //NSString *from = [formatter stringFromDate:lastSyncDate];
   
   [self setup];
   
-  [self callApi:@"api-logs-v1/get-logs"
-     concurrent:YES
-     withMethod:@"POST"
-progressCallBack:nil
-responseCallback:^(id output, NSError *error) {
-  
-  [Answers logCustomEventWithName:@"EDSM API call" customAttributes:@{@"API":@"api-v1/get-logs"}];
-  
-  if (error == nil) {
-    NSArray      *jumps = nil;
-    NSError      *error = nil;
-    NSDictionary *data  = [NSJSONSerialization JSONObjectWithData:output options:0 error:&error];
-    
-    if ([data isKindOfClass:NSDictionary.class]) {
-      NSInteger result = [data[@"msgnum"] integerValue];
-      
-      //100 --> success
-      
-      if (result == 100) {
-        jumps = data[@"logs"];
+  //NSLog(@"getJumpsForCommander: Commander %@ From %@", commander.name, from);
+
+  // The new api (api-logs-v1/get-logs specifies a maximum of 1 week interval between starttime and endtime...
+  // So need to iterate (backwards from now)
+  NSString *endDate = nil;
+
+  // First get the commanders last position (Which incldeus the timedate - so we know where to start working backwards on the logs from
+  // Synchronous not possible with old call... Need to find out how....
+  NSLog(@"getJumpsForCommander::get-position");
+  [self      callApi:@"api-logs-v1/get-position"
+          concurrent:NO
+          withMethod:@"POST"
+    progressCallBack:nil
+    responseCallback:^(id output, NSError *error) {
+
+      NSLog(@"getJumpsForCommander::get-position responseCallback");
+      [Answers logCustomEventWithName:@"EDSM API call" customAttributes:@{@"API":@"api-logs-v1/get-position"}];
+
+      if (error == nil) {
+        NSError      *error = nil;
+        NSDictionary *data  = [NSJSONSerialization JSONObjectWithData:output options:0 error:&error];
         
-        if (jumps.count > 0) {
-          NSDictionary *latestJump   = jumps.firstObject;
-          NSDate       *lastSyncDate = [formatter dateFromString:latestJump[@"date"]];
-          
-          //add 1 second to date of last recorded jump (otherwise EDSM will return this jump to me next time I sync)
-          lastSyncDate = [lastSyncDate dateByAddingTimeInterval:1];
-          
-          commander.edsmAccount.jumpsUpdateTimestamp = [lastSyncDate timeIntervalSinceReferenceDate];
-        }
+        NSLog(@"getJumpsForCommander::get-position responseCallback - no error %@", data);
+        endDate=[data[@"dateLastActivity"] stringValue];
+        
       }
-      else {
-        error = [NSError errorWithDomain:@"EDDiscovery"
-                                        code:result
-                                userInfo:@{NSLocalizedDescriptionKey:data[@"msg"]}];
-      }
+      
     }
-    
-    response(jumps, error);
-  }
-  else {
-    response(nil, error);
-  }
-  
-}
-     parameters:3,
+   parameters:2,
    @"commanderName", commander.name,
-   @"apiKey", commander.edsmAccount.apiKey,
-   @"startdatetime", from
+   @"apiKey", commander.edsmAccount.apiKey
+   
    ];
+  
+  NSLog(@"getJumpsForCommander::get-logs");
+  [self       callApi:@"api-logs-v1/get-logs"
+           concurrent:YES
+           withMethod:@"POST"
+     progressCallBack:nil
+     responseCallback:^(id output, NSError *error) {
+  
+       NSLog(@"getJumpsForCommander::get-logs responseCallback");
+       [Answers logCustomEventWithName:@"EDSM API call" customAttributes:@{@"API":@"api-logs-v1/get-logs"}];
+  
+       if (error == nil) {
+         NSError      *error = nil;
+         NSDictionary *data  = [NSJSONSerialization JSONObjectWithData:output options:0 error:&error];
+         NSArray      *jumps = nil;
+
+         NSLog(@"getJumpsForCommander responseCallback - no error");
+
+         if ([data isKindOfClass:NSDictionary.class]) {
+           NSInteger result = [data[@"msgnum"] integerValue];
+
+           //100 --> success
+      
+           NSLog(@"getJumpsForCommander responseCallback result %ld", result);
+           if (result == 100) {
+             jumps = data[@"logs"];
+        
+             if (jumps.count > 0) {
+               NSDictionary *latestJump   = jumps.firstObject;
+               NSDate       *lastSyncDate = [formatter dateFromString:latestJump[@"date"]];
+          
+               //add 1 second to date of last recorded jump (otherwise EDSM will return this jump to me next time I sync)
+               lastSyncDate = [lastSyncDate dateByAddingTimeInterval:1];
+          
+               commander.edsmAccount.jumpsUpdateTimestamp = [lastSyncDate timeIntervalSinceReferenceDate];
+             }
+           } else {
+             error = [NSError errorWithDomain:@"EDDiscovery"
+                                         code:result
+                                     userInfo:@{NSLocalizedDescriptionKey:data[@"msg"]}];
+           }
+         }
+    
+         NSLog(@"getJumpsForCommander sending response with jump count %lu", jumps.count);
+         response(jumps, error);
+       } else {
+         NSLog(@"getJumpsForCommander sending response no jumps");
+         response(nil, error);
+       }
+  
+     }
+     parameters:2,
+   @"commanderName", commander.name,
+   @"apiKey", commander.edsmAccount.apiKey
+   //ß@"startDateTime", from
+   ];
+  NSLog(@"getJumpsForCommander finished");
 }
 
 + (void)addJump:(Jump *)jump forCommander:(NSString *)commanderName apiKey:(NSString *)apiKey response:(void(^)(BOOL success, NSError *error))response {
@@ -443,10 +492,12 @@ responseCallback:^(id output, NSError *error) {
   NSString   *appVersion = [NSString stringWithFormat:@"%@", [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"]];
   BOOL        sendCoords = NO;
   
+  NSLog(@"addJump: Commander %@ system %@", commanderName, name);
+  
   if ([jump.system hasCoordinates] == YES) {
     sendCoords = YES;
   }
-  
+
   void (^responseBlock)(id output, NSError *error) = ^void(id output, NSError *error) {
     [Answers logCustomEventWithName:@"EDSM API call" customAttributes:@{@"API":@"api-v1/set-log"}];
     
@@ -456,7 +507,8 @@ responseCallback:^(id output, NSError *error) {
       
       if ([data isKindOfClass:NSDictionary.class]) {
         NSInteger result = [data[@"msgnum"] integerValue];
-        
+  
+        NSLog(@"addJump:Response %ld", result);
         //100 --> success
         //401 --> An entry for the same system already exists at that date -> success
         

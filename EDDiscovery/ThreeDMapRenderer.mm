@@ -803,14 +803,14 @@ void subdivide(float u1[2], float u2[2], float u3[2],
       [renderEncoder setCullMode:MTLCullModeNone];
       // Draw each star individually...
       for (int i=0; i<jb->numsystems; i++) {
-      //for (int i=0; i<1; i++) {
 
         //  set vertex buffer for each journey star
-        [renderEncoder setVertexBuffer:_sphere_pb_vertexBuffer offset:0 atIndex:0 ];
-        [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];
-        [renderEncoder setVertexBytes:&colours[COLOUR_IND_JSTAR] length:sizeof(float4) atIndex:2 ];
-        [renderEncoder setVertexBytes:&_star_decay length:sizeof(float) atIndex:3 ];
-        [renderEncoder setVertexBytes:&jb->systems[i].posx length:sizeof(float3) atIndex:4 ];
+        [renderEncoder setVertexBuffer:_sphere_pb_vertexBuffer offset:0 atIndex:0 ];                               // Verticies of the sphere
+        [renderEncoder setVertexBuffer:_dynamicConstantBuffer[_constantDataBufferIndex] offset:0 atIndex:1 ];      // Constants
+        [renderEncoder setVertexBytes:&colours[COLOUR_IND_JSTAR] length:sizeof(float4) atIndex:2 ];                // Colour
+        [renderEncoder setVertexBytes:&_star_decay length:sizeof(float) atIndex:3 ];                               // Decay
+        [renderEncoder setVertexBytes:&jb->systems[i].posx length:sizeof(float3) atIndex:4 ];                      // Offset
+        //[renderEncoder setVertexBuffer:&jb->systems[i].posx offset:0 atIndex:4 ];
 
         //NSLog(@"%s: render system %d (%8.4f %8.4f %8.4f)", __FUNCTION__, i, jb->systems[i].posx, jb->systems[i].posy, jb->systems[i].posz);
         // tell the render context we want to draw our primitives
@@ -821,7 +821,7 @@ void subdivide(float u1[2], float u2[2], float u3[2],
                            indexBufferOffset:0
                                instanceCount:1];
         
-#if 1
+#if 0
         //[renderEncoder setRenderPipelineState:_pipelineState[MTL_PIPE_SIMPLELINE]];
 
         [renderEncoder setVertexBuffer:_sphere_pb_vertexBuffer offset:0 atIndex:0 ];
@@ -829,6 +829,7 @@ void subdivide(float u1[2], float u2[2], float u3[2],
         [renderEncoder setVertexBytes:&colours[COLOUR_IND_AXES_SAG] length:sizeof(float4) atIndex:2 ];
         [renderEncoder setVertexBytes:&_star_decay length:sizeof(float) atIndex:3 ];
         [renderEncoder setVertexBytes:&jb->systems[i].posx length:sizeof(float3) atIndex:4 ];
+        //[renderEncoder setVertexBuffer:&jb->systems[i].posx offset:0 atIndex:4 ];
         [renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
                                   indexCount:3*20
                                    indexType:MTLIndexTypeUInt16

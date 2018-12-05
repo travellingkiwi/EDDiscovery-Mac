@@ -184,14 +184,21 @@
         NSString            *prevName        = nil;
         NSString            *className       = NSStringFromClass(System.class);
         
+        NSLog(@"Adding Objects from responseSystems");
+        LoadingViewController.textField.stringValue = NSLocalizedString(@"Adding Objects", @"");
+
+        NSInteger objAddCount=0;
         for (NSDictionary *systemData in responseSystems) {
           name = systemData[@"name"];
           
           if (name.length > 0) {
             [responseNames addObject:name];
+            objAddCount++;
           }
         }
         
+        LoadingViewController.textField.stringValue = NSLocalizedString(@"Getting LocalSystems", @"");
+        NSLog(@"Getting localSystems");
         localSystems = [System systemsWithNames:responseNames inContext:WORK_CONTEXT];
         
         [MAIN_CONTEXT performBlock:^{
@@ -200,9 +207,13 @@
           LoadingViewController.progressIndicator.doubleValue   = 0;
         }];
 
+        LoadingViewController.textField.stringValue = NSLocalizedString(@"Parsing Data", @"");
+        NSLog(@"Parsing Data");
         for (NSDictionary *systemData in responseSystems) {
           name = systemData[@"name"];
           
+          //NSLog(@"Parsing Data for %@ Added %@, updated %@ systems", name, FORMAT(numAdded), FORMAT(numUpdated));
+
           if (name.length > 0 && ![prevName isEqualToString:name]) {
             System *system = (idx >= localSystems.count) ? nil : localSystems[idx];
             
@@ -222,6 +233,8 @@
             
             if (((numAdded % 1000) == 0 && numAdded != 0) || ((numUpdated % 1000) == 0 && numUpdated != 0)) {
               [EventLogger addLog:[NSString stringWithFormat:@"Added %@, updated %@ systems", FORMAT(numAdded), FORMAT(numUpdated)]];
+              NSLog(@"Added %@, updated %@ systems", FORMAT(numAdded), FORMAT(numUpdated));
+              [WORK_CONTEXT save];
             }
             
             if ((progress++ % step) == 0) {
