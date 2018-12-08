@@ -117,7 +117,7 @@
 - (void)clearLogs {
   dispatch_async(dispatch_get_main_queue(), ^{
     [self.textView setString:@""];
-    [currLine setString:@""];
+    [self->currLine setString:@""];
   });
 }
 
@@ -142,7 +142,7 @@
       attr = [[NSAttributedString alloc] initWithString:@"\n" attributes:nil];
       
       [self.textView.textStorage appendAttributedString:attr];
-      [currLine setString:@""];
+      [self->currLine setString:@""];
     }
     
     if (timestamp) {
@@ -151,14 +151,15 @@
       attr = [[NSAttributedString alloc] initWithString:str attributes:attributes];
       
       [self.textView.textStorage appendAttributedString:attr];
-      [currLine appendString:str];
+      [self->currLine appendString:str];
     }
     
     attr = [[NSAttributedString alloc] initWithString:msg attributes:attributes];
     
     [self.textView.textStorage appendAttributedString:attr];
-    [currLine appendString:msg];
+    [self->currLine appendString:msg];
     
+    //NSLog(@"Scrolling - %@", msg);
     [self.textView scrollRangeToVisible:NSMakeRange(self.textView.string.length, 0)];
   });
 }

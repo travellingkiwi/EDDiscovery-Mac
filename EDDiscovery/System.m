@@ -42,17 +42,21 @@
     request.returnsObjectsAsFaults = YES;
     request.includesPendingChanges = YES;
     
+    NSLog(@"Counting Total Systems");
     countTot = [context countForFetchRequest:request error:&error];
     
     NSAssert1(error == nil, @"could not execute fetch request: %@", error);
     
-    request.predicate = [NSPredicate predicateWithFormat:@"name == %@ || x != 0 || y != 0 || z != 0", @"Sol"];
+    // Counting systems with no co-ords is abotu 10x quicker than counting the ones with...
+    // Takes about 1.5 - 2 minutes with 27,000,000 systems... We don't need to know that badly... If at all...
+    request.predicate = [NSPredicate predicateWithFormat:@"name == %@ || x == 0 || y == 0 || z == 0", @"Sol"];
     
+    NSLog(@"Counting Co-Ordinate Systems");
     countCoords = [context countForFetchRequest:request error:&error];
     
     NSAssert1(error == nil, @"could not execute fetch request: %@", error);
     
-    NSString *msg = [NSString stringWithFormat:@"DB contains %@ systems (%@ with known coords)", FORMAT(countTot), FORMAT(countCoords)];
+    NSString *msg = [NSString stringWithFormat:@"DB contains %@ systems (%@ with no known coords)", FORMAT(countTot), FORMAT(countCoords)];
     
     [EventLogger addLog:msg];
   }];
@@ -184,7 +188,7 @@
         NSString            *prevName        = nil;
         NSString            *className       = NSStringFromClass(System.class);
         
-        NSLog(@"Adding Objects from responseSystems");
+        NSLog(@"Adding %lu Objects from responseSystems", responseSystems.count);
         LoadingViewController.textField.stringValue = NSLocalizedString(@"Adding Objects", @"");
 
         NSInteger objAddCount=0;
@@ -207,8 +211,10 @@
           LoadingViewController.progressIndicator.doubleValue   = 0;
         }];
 
+        NSLog(@"Got %lu localSystems", localSystems.count);
+
         LoadingViewController.textField.stringValue = NSLocalizedString(@"Parsing Data", @"");
-        NSLog(@"Parsing Data");
+        NSLog(@"Parsing Data %lu systems", responseSystems.count);
         for (NSDictionary *systemData in responseSystems) {
           name = systemData[@"name"];
           

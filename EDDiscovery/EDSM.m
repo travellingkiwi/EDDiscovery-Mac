@@ -237,6 +237,114 @@
   }
 }
 
+- (void)loadJournalDiscards:(void(^)(NSArray *discards, NSError *error))response {
+  NSAssert([self.managedObjectContext isEqual:WORK_CONTEXT], @"Wrong context!");
+
+  NSLog(@"Getting journal discards");
+  [EDSMConnection getDiscards:self.commander.name
+                       apiKey:self.apiKey
+                     response:^(NSArray *ignore_events, NSError *error) {
+                       
+                       if (error!=nil) {
+                         if ([error.domain isEqualToString:@"EDDiscovery"]) {
+                           [EventLogger addError:[NSString stringWithFormat:@"ERROR from EDSM: %ld - %@", (long)error.code, error.localizedDescription]];
+                           
+                         } else {
+                           [EventLogger addError:[NSString stringWithFormat:@"NETWORK ERROR: %ld - %@", (long)error.code, error.localizedDescription]];
+                         }
+                         if (response != nil) {
+                           [WORK_CONTEXT performBlock:^{
+                             response(ignore_events, error);
+                           }];
+                         }
+                       } else {
+                         //[WORK_CONTEXT performBlock:^{
+                           //
+                           // We got a response that contains the list of events to NOT send to EDSM...
+                           
+                           if (response != nil) {
+                             response(ignore_events, error);
+                           }
+                         //}];
+                       }
+   }];
+                         
+}
+
+- (void)sendJournalToEDSM:(NSString *)json dictionary:(NSDictionary *)journal response:(void(^__nullable)(void))response {
+  NSAssert([self.managedObjectContext isEqual:WORK_CONTEXT], @"Wrong context!");
+
+  NSLog(@"Sending journal to EDSM: %@ - %@", [journal valueForKey:@"timestamp"], [journal valueForKey:@"StarSystem"]);
+  
+  //NSManagedObjectID *edsmID = self.objectID;
+  //NSManagedObjectID *jumpID = jump.objectID;
+  
+  NSLog(@"Sending journal '%@' to EDSM", journal);
+  
+  [EDSMConnection addJournal:json
+                     journal:journal
+             forCommander:self.commander.name
+                   apiKey:self.apiKey
+                 response:^(BOOL success, NSError *error) {
+                   
+                   if (success == NO) {
+                     if ([error.domain isEqualToString:@"EDDiscovery"]) {
+                       [EventLogger addError:[NSString stringWithFormat:@"ERROR from EDSM: %ld - %@", (long)error.code, error.localizedDescription]];
+                       
+                       //EDSM did not like this journal entry...
+                       
+                       
+                     } else {
+                       [EventLogger addError:[NSString stringWithFormat:@"NETWORK ERROR: %ld - %@", (long)error.code, error.localizedDescription]];
+                     }
+                     
+                     if (response != nil) {
+                       [WORK_CONTEXT performBlock:^{
+                         response();
+                       }];
+                     }
+                   } else {
+                     [WORK_CONTEXT performBlock:^{
+#if 0
+                       EDSM *edsm = [WORK_CONTEXT existingObjectWithID:edsmID error:nil];
+                       Jump *jump = [WORK_CONTEXT existingObjectWithID:jumpID error:nil];
+                       
+                       if (edsm.jumps == nil) {
+                         jump.edsm = edsm;
+                       } else {
+                         NSUInteger idx = [edsm.jumps indexOfObject:jump
+                                                      inSortedRange:(NSRange){0, edsm.jumps.count}
+                                                            options:NSBinarySearchingInsertionIndex
+                                                    usingComparator:^NSComparisonResult(Jump *jump1, Jump *jump2) {
+                                                      NSDate *date1 = [NSDate dateWithTimeIntervalSinceReferenceDate:jump1.timestamp];
+                                                      NSDate *date2 = [NSDate dateWithTimeIntervalSinceReferenceDate:jump2.timestamp];
+                                                      
+                                                      return [date1 compare:date2];
+                                                    }];
+                         
+                         [edsm insertObject:jump inJumpsAtIndex:idx];
+                       }
+                       
+                       [WORK_CONTEXT save];
+                       
+                       //if (log == YES) {
+                         if ([EventLogger.instance.currLine containsString:jump.system.name]) {
+                           [EventLogger addLog:@" - sent to EDSM!" timestamp:NO newline:NO];
+                         } else {
+                           [EventLogger addLog:[NSString stringWithFormat:@"Sent new jump to EDSM: %@ - %@", [NSDate dateWithTimeIntervalSinceReferenceDate:jump.timestamp], jump.system.name]];
+                         }
+                       //}
+#endif
+
+                       if (response != nil) {
+                         response();
+                       }
+                     }];
+                   }
+                 }];
+  
+}
+  
 - (void)sendJumpsToEDSM:(NSOrderedSet *)jumps response:(void(^)(void))response {
   NSAssert([self.managedObjectContext isEqual:WORK_CONTEXT], @"Wrong context!");
   

@@ -22,10 +22,13 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (void)sendDistancesToEDSM:(System *)system response:(void(^)(BOOL distancesSubmitted, BOOL systemTrilaterated))response;
 
+- (void)sendJournalToEDSM:(NSString *)json dictionary:(NSDictionary *)journal response:(void(^__nullable)(void))response;
 - (void)syncJumpsWithEDSM:(void(^)(void))response;
 - (void)sendJumpToEDSM:(Jump *)jump log:(BOOL)log response:(void(^__nullable)(void))response;
 - (void)sendNoteToEDSM:(NSString *)note forSystem:(NSString *)system;
 - (void)deleteJumpFromEDSM:(Jump *)jump;
+
+- (void)loadJournalDiscards:(void(^)(NSArray *discards, NSError *error))response;
 
 @property(nullable, nonatomic, strong) NSString *apiKey;
 

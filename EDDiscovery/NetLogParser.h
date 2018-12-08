@@ -9,7 +9,7 @@
 #import <Foundation/Foundation.h>
 #import "System.h"
 
-#define DEFAULT_LOG_DIR_PATH_DIR [NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES).firstObject stringByAppendingPathComponent:@"Frontier Developments/Elite Dangerous/Logs"]
+#define DEFAULT_LOG_DIR_PATH_DIR [NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES).firstObject stringByAppendingPathComponent:@"Frontier Developments/Elite Dangerous"]
 
 @class Commander;
 

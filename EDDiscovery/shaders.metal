@@ -116,8 +116,8 @@ vertex ColorInOut galaxy_star_vertex(device journey_vertex_t* vertex_array [[ bu
   ColorInOut out;
   
   // Test here for distance from centre... If we're too far away, just dont' draw it...
-  float sep=distance_squared(constants.kEye, vertex_array[vid].position);
-  
+  float sep=distance_squared(float3(constants.kEye), float3(vertex_array[vid].position));
+
   //if(sep > some_magic_distance) {
   //  discard_fragment();
   //} else {

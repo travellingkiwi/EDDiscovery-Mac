@@ -39,6 +39,7 @@
 #pragma mark instance management
 
 static NetLogParser *instance = nil;
+static NSArray *EDSMdiscardJournal=nil;
 
 + (nullable NetLogParser *)instanceOrNil:(Commander * __nonnull)commander {
   NSAssert (NSThread.isMainThread, @"Must be on main thread");
@@ -79,7 +80,8 @@ static NetLogParser *instance = nil;
   
     if (self) {
       commanderID    = commander.objectID;
-      netLogFilesDir = [commander.netLogFilesDir copy];
+      //netLogFilesDir = [commander.netLogFilesDir copy];
+      netLogFilesDir = @"/Volumes/SamsungSSD/home/hamish/Library/Application Support/Frontier Developments/Elite Dangerous";
       currFilePath   = nil;
       firstRun       = YES;
       running        = NO;
@@ -93,8 +95,11 @@ static NetLogParser *instance = nil;
 
 - (void)startInstance:(void(^__nonnull)(void))completionBlock {
   if (running == NO) {
-    LoadingViewController.textField.stringValue = NSLocalizedString(@"Parsing netLog files", @"");
+    [MAIN_CONTEXT performBlock:^{
+      LoadingViewController.textField.stringValue = NSLocalizedString(@"Parsing Journal files", @"");
+    }];
     
+    NSLog(@"Start Instance for Parsing Journal files");
     running = YES;
     queue   = [[VDKQueue alloc] init];
     
@@ -102,6 +107,7 @@ static NetLogParser *instance = nil;
     [queue addPath:netLogFilesDir];
 
     [WORK_CONTEXT performBlock:^{
+     
       [self scanNetLogFilesDir];
       
       [MAIN_CONTEXT performBlock:^{
@@ -181,13 +187,13 @@ static NetLogParser *instance = nil;
   NSMutableArray *netLogFiles = [NSMutableArray array];
   
   for (NSString *file in files) {
-    if ([file rangeOfString:@"netLog."].location == 0) {
+    if ([file rangeOfString:@"Journal."].location == 0) {
       [netLogFiles addObject:file];
     }
   }
   
   if (firstRun) {
-    [EventLogger addLog:[NSString stringWithFormat:@"Have %@ netLog files in log directory", FORMAT(netLogFiles.count)]];
+    [EventLogger addLog:[NSString stringWithFormat:@"Have %@ Journal files in log directory", FORMAT(netLogFiles.count)]];
   }
   
   NSMutableArray *netLogsFilesAttrs = [NSMutableArray arrayWithCapacity:netLogFiles.count];
@@ -239,7 +245,7 @@ static NetLogParser *instance = nil;
       progressValue++;
       
       if (netLogFile.complete == NO) {
-        NSLog(@"Parsing netLog file: %@", netLog);
+        NSLog(@"Parsing Journal file: %@", netLog);
 
         if ([netLog isEqualToString:netLogsFilesAttrs.lastObject[FILE_KEY]] == NO && allJumps == nil) {
           allJumps = [[Jump allJumpsOfCommander:commander] mutableCopy];
@@ -271,9 +277,9 @@ static NetLogParser *instance = nil;
       if (numParsed > 1) {
         ti = [NSDate timeIntervalSinceReferenceDate] - ti;
         
-        [EventLogger addLog:[NSString stringWithFormat:@"Parsed %@ jumps from %@ netLog files in %.1f seconds", FORMAT(numJumps), FORMAT(numParsed), ti]];
+        [EventLogger addLog:[NSString stringWithFormat:@"Parsed %@ jumps from %@ Journal files in %.1f seconds", FORMAT(numJumps), FORMAT(numParsed), ti]];
         
-        [Answers logCustomEventWithName:@"NETLOG parse" customAttributes:@{@"jumps":@(numJumps),@"files":@(numParsed)}];
+        [Answers logCustomEventWithName:@"JOURNAL parse" customAttributes:@{@"jumps":@(numJumps),@"files":@(numParsed)}];
       }
     }
   }
@@ -299,6 +305,16 @@ static NetLogParser *instance = nil;
   NSAssert([netLogFile.managedObjectContext isEqual:WORK_CONTEXT], @"Wrong context!");
   
   NSMutableArray *newJumps = [NSMutableArray array];
+
+  static dispatch_once_t  onceToken;
+  
+  dispatch_once(&onceToken, ^{
+    NSLog(@"Will load discards");
+    [netLogFile.commander.edsmAccount loadJournalDiscards:^(NSArray *discards, NSError *error) {
+      EDSMdiscardJournal=discards;
+    }];
+  });
+                
   
   if (netLogFile != nil) {
     NSFileHandle *currFileHandle = [NSFileHandle fileHandleForReadingAtPath:netLogFile.path];
@@ -324,12 +340,50 @@ static NetLogParser *instance = nil;
       }
     }
     
-    NSArray *records = [text componentsSeparatedByString:@"{"];
+    //NSArray *records = [text componentsSeparatedByString:@"{"];
+    NSArray *records = [text componentsSeparatedByString:@"\n"];
     
     for (NSString *record in records) {
-      NSString *entry = [[NSString stringWithFormat:@"{%@", record] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+      if((record == nil) || ([record isEqualToString:@""])) {
+        NSLog(@"Avoiding empty record");
+        continue;
+      }
+      NSLog(@"Parse Record %@", record);
       
-      [self parseNetLogRecord:entry inFile:netLogFile jumps:allJumps lastJump:lastJump];
+      //NSString *entry = [[NSString stringWithFormat:@"{%@", record] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+      
+      //NSLog(@"Read Entry %@", entry);
+      
+      //[self parseNetLogRecord:entry inFile:netLogFile jumps:allJumps lastJump:lastJump];
+      
+      // This is a journal record in JSON format... Send it to EDSM...
+      NSError *error;
+      NSData *data = [record dataUsingEncoding:NSUTF8StringEncoding];
+      NSDictionary *journal = [NSJSONSerialization JSONObjectWithData:data
+                                                                     options:NSJSONReadingMutableContainers
+                                                                       error:&error];
+
+      // Send all journal entries that EDSM processes to EDSM...
+      NSString *event=[journal valueForKey:@"event"];
+
+      if([EDSMdiscardJournal containsObject:event]) {
+        NSLog(@"Event %@ discarded at EDSM", event);
+      } else {
+        NSLog(@"Event %@ wanted at EDSM", event);
+        [netLogFile.commander.edsmAccount sendJournalToEDSM:record dictionary:journal response:nil];
+      }
+      
+      // But for the initial version we just want FSDJumps locally because we store jumps, not events... yet...
+      if([event isEqualToString:@"FSDJump"]) {
+        [self parseJournalFSBRecord:journal inFile:netLogFile jumps:allJumps lastJump:lastJump ];
+      } else {
+        NSLog(@"Discard journal entry %@", event);
+        continue;
+      }
+      //[addJournal:record journal:journal forCommander:netLogFile.commander apiKey:netLogFile.apiKey ]
+      
+      NSLog(@"JSON converted to %@", journal);
+      
     }
     
     netLogFile.fileOffset = currFileHandle.offsetInFile;
@@ -349,15 +403,13 @@ static NetLogParser *instance = nil;
         if ((newJumps.count % 1000) == 0 && newJumps.count != 0) {
           [EventLogger addLog:[NSString stringWithFormat:@"%@ jumps parsed...", FORMAT(newJumps.count)]];
         }
-      }
-      else {
+      //} else {
         NSError *error  = nil;
         BOOL     result = [WORK_CONTEXT obtainPermanentIDsForObjects:newJumps error:&error];
         
         if (error != nil) {
-          NSLog(@"ERROR obtaining permanend IDs: %@", error.localizedDescription);
-        }
-        else if (result == YES) {
+          NSLog(@"ERROR obtaining permanent IDs: %@", error.localizedDescription);
+        } else if (result == YES) {
           for (Jump *jump in newJumps) {
             NSString *msg = [NSString stringWithFormat:@"Jump to %@ (num visits: %ld)", jump.system.name, (long)jump.system.jumps.count];
             
@@ -367,11 +419,11 @@ static NetLogParser *instance = nil;
               [jump.system updateFromEDSM:nil];
             }
             
-            if (netLogFile.commander.edsmAccount != nil) {
-              if (jump.edsm == nil) {
-                [netLogFile.commander.edsmAccount sendJumpToEDSM:jump log:YES response:nil];
-              }
-            }
+            //if (netLogFile.commander.edsmAccount != nil) {
+            //  if (jump.edsm == nil) {
+            //    [netLogFile.commander.edsmAccount sendJumpToEDSM:jump log:YES response:nil];
+            //  }
+            //}
             
             [EventLogger addLog:msg];
             
@@ -461,6 +513,79 @@ static NetLogParser *instance = nil;
   
   if (parseRecord) {
     [self parseNetLogSystemRecord:record inFile:netLogFile jumps:allJumps lastJump:lastJump];
+  }
+}
+
+- (NSDate *)parseJournalDate:(NSString *)record {
+  static NSDateFormatter *dateTimeFormatter = nil;
+  static dispatch_once_t  onceToken;
+  
+  dispatch_once(&onceToken, ^{
+    dateTimeFormatter = [[NSDateFormatter alloc] init];
+    
+    dateTimeFormatter.dateFormat = @"yyyy-MM-dd'T'HH:mm:ssZZZZZ";
+    
+  });
+  
+  NSDate   *dateTime    = [dateTimeFormatter dateFromString:record];
+  
+  return dateTime;
+}
+
+- (void)parseJournalFSBRecord:(NSDictionary *)record inFile:(NetLogFile *)netLogFile jumps:(NSMutableArray *)allJumps lastJump:(Jump **)lastJump {
+  NSAssert(netLogFile != nil, @"netLogFile MUST have a value");
+  NSAssert([netLogFile.managedObjectContext isEqual:WORK_CONTEXT], @"Wrong context!");
+  
+  //BOOL      haveCoords = NO;
+  //NSDate   *date       = [self parseDateOfRecord:record inFile:netLogFile];
+  //NSString *name       = [self parseSystemNameOfRecord:record haveCoords:&haveCoords];
+  NSString *timestamp=[record valueForKey:@"timestamp"];
+  NSString *name=[record valueForKey:@"StarSystem"];
+  NSDate   *date=[self parseJournalDate:timestamp];
+  
+  if (name != nil && date != nil) {
+    
+    //cannot have two subsequent jumps to the same system
+    // lastNetLogJumpOfCOmmander fails... Might be because jumplist of empty?
+    //if ((*lastJump) == nil) {
+    //  (*lastJump) = [Jump lastNetlogJumpOfCommander:netLogFile.commander beforeDate:date];
+    //}
+    
+    //if ([(*lastJump).system.name isEqualToString:name] == NO) {
+      System *system  = [System systemWithName:name inContext:WORK_CONTEXT];
+      
+      if (system == nil) {
+        NSString *className = NSStringFromClass(System.class);
+        
+        system = [NSEntityDescription insertNewObjectForEntityForName:className inManagedObjectContext:WORK_CONTEXT];
+        
+        system.name = name;
+      }
+      
+      Jump *jump = [allJumps filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"timestamp == %@", date]].lastObject;
+      
+      if (jump == nil) {
+        NSString *className = NSStringFromClass(Jump.class);
+        
+        jump = [NSEntityDescription insertNewObjectForEntityForName:className inManagedObjectContext:WORK_CONTEXT];
+        
+        jump.system    = system;
+        jump.timestamp = [date timeIntervalSinceReferenceDate];
+        
+        NSArray *startPos=[record valueForKey:@"StarPos"];
+        system.x=[startPos[0] doubleValue];
+        system.y=[startPos[1] doubleValue];
+        system.z=[startPos[2] doubleValue];
+        
+      } else {
+        [allJumps removeObject:jump];
+      }
+      
+      jump.netLogFile = netLogFile;
+      
+      (*lastJump) = jump;
+      
+    //}
   }
 }
 

@@ -23,10 +23,15 @@
 //system distances
 + (void)submitDistances:(NSArray <Distance *> *)distances forSystem:(NSString *)systemName response:(void(^)(BOOL distancesSubmitted, BOOL systemTrilaterated, NSError *error))response;
 
+
 //commander travel logs
 + (void)getJumpsForCommander:(Commander *)commander response:(void(^)(NSArray *jumps, NSError *error))response;
 + (void)addJump:(Jump *)jump forCommander:(NSString *)commanderName apiKey:(NSString *)apiKey response:(void(^)(BOOL success, NSError *error))response;
 + (void)deleteJump:(Jump *)jump forCommander:(NSString *)commanderName apiKey:(NSString *)apiKey response:(void(^)(BOOL success, NSError *error))response;
+
+// Journal
++ (void)addJournal:(NSString *)json journal:(NSDictionary *)journal forCommander:(NSString *)commanderName apiKey:(NSString *)apiKey response:(void(^)(BOOL success, NSError *error))response;
++ (void)getDiscards:(NSString *)commanderName apiKey:(NSString *)apiKey response:(void(^)(NSArray *ignore_events, NSError *error))response;
 
 //commander comments
 + (void)getNotesForCommander:(Commander *)commander response:(void(^)(NSArray *comments, NSError *error))response;

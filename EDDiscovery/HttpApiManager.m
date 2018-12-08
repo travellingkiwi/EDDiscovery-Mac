@@ -8,35 +8,30 @@
 
 #import "HttpApiManager.h"
 #import "NSURLConnection+Progress.h"
+#import "URLConnection.h"
 
 NSString* baseUrl=nil;
 NSString* locale=nil;
 
 @implementation HttpApiManager
 
-+(void)setBaseUrl:(NSString*)aBaseUrl
-{
++(void)setBaseUrl:(NSString*)aBaseUrl {
   baseUrl=aBaseUrl;
 }
 
-+(void)callApi:(NSString*)apiName concurrent:(BOOL)concurrent withMethod:(NSString*)aMethod progressCallBack:(ProgressBlock)progressCallback responseCallback:(void(^)(id response, NSError *error))responseCallback parametersCount:(NSInteger)count parameters:(va_list)valist
-{
++(void)callApi:(NSString*)apiName concurrent:(BOOL)concurrent withMethod:(NSString*)aMethod progressCallBack:(ProgressBlock)progressCallback responseCallback:(void(^)(id response, NSError *error))responseCallback parametersCount:(NSInteger)count parameters:(va_list)valist {
   NSString* value1;
   NSString* value2;
   NSMutableString* urlString;
-  if (apiName!=nil)
-  {
+  if (apiName!=nil) {
     urlString=[NSMutableString stringWithFormat:@"%@/%@",
                baseUrl,
                apiName];
-  }
-  else
-  {
+  } else {
     urlString=[NSMutableString stringWithFormat:@"%@",baseUrl];
   }
   NSMutableString* parameter=[NSMutableString string];
-  for (int i=0; i<count; i++)
-  {
+  for (int i=0; i<count; i++) {
     value1=va_arg(valist, NSString*);
     value2=va_arg(valist, NSString*);
     value2=(NSString *)CFBridgingRelease(CFURLCreateStringByAddingPercentEscapes(NULL,
@@ -48,22 +43,48 @@ NSString* locale=nil;
   }
   
   NSMutableURLRequest *request;
-  if ([aMethod isEqualToString:@"POST"])
-  {
+  if ([aMethod isEqualToString:@"POST"]) {
     request=[NSMutableURLRequest requestWithURL:[NSURL URLWithString:urlString]];
     [request setHTTPMethod:@"POST"];
     [request setHTTPBody:[parameter dataUsingEncoding:NSASCIIStringEncoding]];
-  }
-  else
-  {
+  } else {
     request=[NSMutableURLRequest requestWithURL:[NSURL URLWithString:[urlString stringByAppendingFormat:@"?%@",parameter]]];
   }
-  
-  [self scheduleConnectionWithRequest:request concurrent:concurrent progressCallback:progressCallback responseCallback:responseCallback];
+
+
+  if(!concurrent) {
+    NSURLResponse *response;
+    NSError *error;
+    NSData *data;
+
+    NSLog(@"Synchronous Request");
+    
+    data=[URLConnection sendSynchronousRequest:request returningResponse:&response error:&error];
+    
+#ifdef HTTP_API_MANAGER_DEBUG
+    NSString *string = [NSString stringWithFormat:@"length: %ld", (long)data.length];
+    
+    if (data.length < 51200) {
+      string = [[NSString alloc] initWithBytes:data.bytes length:data.length encoding: NSUTF8StringEncoding];
+    }
+    
+    NSLog(@"---------- Request ----------");
+    NSLog(@"%@ %@",request.HTTPMethod,request.URL);
+    NSLog(@"---------- body ----------");
+    NSLog(@"%@",[[NSString alloc] initWithData:request.HTTPBody encoding:NSUTF8StringEncoding]);
+    NSLog(@"---------- Response ----------");
+    NSLog(@"%@",string);
+#endif
+    
+    responseCallback(data, error);
+
+    NSLog(@"callAPI (1) finished");
+  } else {
+    [self scheduleConnectionWithRequest:request concurrent:concurrent progressCallback:progressCallback responseCallback:responseCallback];
+  }
 }
 
-+(void)callApi:(NSString*)apiName concurrent:(BOOL)concurrent withMethod:(NSString*)aMethod progressCallBack:(ProgressBlock)progressCallback responseCallback:(void(^)(id response, NSError *error))responseCallback parameters:(NSInteger)count,...
-{
++(void)callApi:(NSString*)apiName concurrent:(BOOL)concurrent withMethod:(NSString*)aMethod progressCallBack:(ProgressBlock)progressCallback responseCallback:(void(^)(id response, NSError *error))responseCallback parameters:(NSInteger)count,... {
   va_list args;
   va_start(args, count);
   [HttpApiManager callApi:apiName
@@ -75,27 +96,22 @@ NSString* locale=nil;
                parameters:args];
 }
 
-+(void)callApi:(NSString*)apiName concurrent:(BOOL)concurrent progressCallBack:(ProgressBlock)progressCallback responseCallback:(void(^)(id response, NSError *error))responseCallback multipartsCount:(NSInteger)count multiparts:(va_list)valist
-{
++(void)callApi:(NSString*)apiName concurrent:(BOOL)concurrent progressCallBack:(ProgressBlock)progressCallback responseCallback:(void(^)(id response, NSError *error))responseCallback multipartsCount:(NSInteger)count multiparts:(va_list)valist {
   NSString* value1=nil;
   NSString* value2=nil;
   NSString* value3=nil;
   NSData* fileData=nil;
   NSMutableString* urlString;
-  if (apiName!=nil)
-  {
+  if (apiName!=nil) {
     urlString=[NSMutableString stringWithFormat:@"%@/%@",
                baseUrl,
                apiName];
-  }
-  else
-  {
+  } else {
     urlString=[NSMutableString stringWithFormat:@"%@",baseUrl];
   }
   NSMutableData* postData=[NSMutableData data];
 
-  for (int i=0; i<count; i++)
-  {
+  for (int i=0; i<count; i++) {
     value1=va_arg(valist, NSString*);
     value2=va_arg(valist, NSString*);
     value3=nil;

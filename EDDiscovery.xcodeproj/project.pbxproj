@@ -14,7 +14,10 @@
 		1C4EE0191D592E28002BDB1A /* backLoader.m in Sources */ = {isa = PBXBuildFile; fileRef = 1C4EE0181D592E28002BDB1A /* backLoader.m */; };
 		1C6ADA521D3523BC004B04A4 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1C6ADA501D3523BC004B04A4 /* Metal.framework */; };
 		1C6ADA531D3523BC004B04A4 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1C6ADA511D3523BC004B04A4 /* MetalKit.framework */; };
+		1C74381521B92EB200E91931 /* URLConnection.m in Sources */ = {isa = PBXBuildFile; fileRef = 1C74381421B92EB200E91931 /* URLConnection.m */; };
 		1CA9FD4F1D32DE8C00A93F60 /* ThreeDMapViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1CA9FD4E1D32DE8C00A93F60 /* ThreeDMapViewController.m */; };
+		1CF7317F21B9DFBC001DC458 /* Commander+CoreDataProperties.m in Sources */ = {isa = PBXBuildFile; fileRef = 1CF7317921B9DFBC001DC458 /* Commander+CoreDataProperties.m */; };
+		1CF7318421BA7074001DC458 /* Commander+CoreDataProperties.m in Sources */ = {isa = PBXBuildFile; fileRef = 1CF7318321BA7074001DC458 /* Commander+CoreDataProperties.m */; };
 		D903C6F31D3F719D0087BC07 /* NSImage+Tint.m in Sources */ = {isa = PBXBuildFile; fileRef = D903C6F21D3F719D0087BC07 /* NSImage+Tint.m */; };
 		D917A8E81CC672E20087BC07 /* EDSM+CoreDataProperties.m in Sources */ = {isa = PBXBuildFile; fileRef = D917A8E51CC672E20087BC07 /* EDSM+CoreDataProperties.m */; };
 		D917A8E91CC672E20087BC07 /* EDSM.m in Sources */ = {isa = PBXBuildFile; fileRef = D917A8E71CC672E20087BC07 /* EDSM.m */; };
@@ -52,7 +55,6 @@
 		D94DE30A1CC509720087BC07 /* EventLogger.m in Sources */ = {isa = PBXBuildFile; fileRef = D94DE3091CC509720087BC07 /* EventLogger.m */; };
 		D94DE30F1CC510D00087BC07 /* NetLogFile+CoreDataProperties.m in Sources */ = {isa = PBXBuildFile; fileRef = D94DE30C1CC510D00087BC07 /* NetLogFile+CoreDataProperties.m */; };
 		D94DE3101CC510D00087BC07 /* NetLogFile.m in Sources */ = {isa = PBXBuildFile; fileRef = D94DE30E1CC510D00087BC07 /* NetLogFile.m */; };
-		D952CAB81CD371BF0087BC07 /* Commander+CoreDataProperties.m in Sources */ = {isa = PBXBuildFile; fileRef = D952CAB51CD371BF0087BC07 /* Commander+CoreDataProperties.m */; };
 		D952CAB91CD371BF0087BC07 /* Commander.m in Sources */ = {isa = PBXBuildFile; fileRef = D952CAB71CD371BF0087BC07 /* Commander.m */; };
 		D95E150D1CC42DE40087BC07 /* HttpApiManager.m in Sources */ = {isa = PBXBuildFile; fileRef = D95E150C1CC42DE40087BC07 /* HttpApiManager.m */; };
 		D95E15131CC42E620087BC07 /* EDSMConnection.m in Sources */ = {isa = PBXBuildFile; fileRef = D95E15121CC42E620087BC07 /* EDSMConnection.m */; };
@@ -115,8 +117,15 @@
 		1C6ADA4F1D35224D004B04A4 /* AAPLSharedTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AAPLSharedTypes.h; sourceTree = "<group>"; };
 		1C6ADA501D3523BC004B04A4 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		1C6ADA511D3523BC004B04A4 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
+		1C74381421B92EB200E91931 /* URLConnection.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = URLConnection.m; sourceTree = "<group>"; };
+		1C74381621B92EEA00E91931 /* URLConnection.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = URLConnection.h; sourceTree = "<group>"; };
 		1CA9FD4D1D32DE8C00A93F60 /* ThreeDMapViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThreeDMapViewController.h; sourceTree = "<group>"; };
 		1CA9FD4E1D32DE8C00A93F60 /* ThreeDMapViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ThreeDMapViewController.m; sourceTree = "<group>"; };
+		1CF7317521B9DF50001DC458 /* EDDiscovery 3.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "EDDiscovery 3.xcdatamodel"; sourceTree = "<group>"; };
+		1CF7317821B9DFBC001DC458 /* Commander+CoreDataProperties.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Commander+CoreDataProperties.h"; sourceTree = "<group>"; };
+		1CF7317921B9DFBC001DC458 /* Commander+CoreDataProperties.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "Commander+CoreDataProperties.m"; sourceTree = "<group>"; };
+		1CF7318221BA7074001DC458 /* Commander+CoreDataProperties.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "Commander+CoreDataProperties.h"; path = "EDDiscovery/Commander+CoreDataProperties.h"; sourceTree = "<group>"; };
+		1CF7318321BA7074001DC458 /* Commander+CoreDataProperties.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = "Commander+CoreDataProperties.m"; path = "EDDiscovery/Commander+CoreDataProperties.m"; sourceTree = "<group>"; };
 		D903C6F11D3F719D0087BC07 /* NSImage+Tint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSImage+Tint.h"; sourceTree = "<group>"; };
 		D903C6F21D3F719D0087BC07 /* NSImage+Tint.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSImage+Tint.m"; sourceTree = "<group>"; };
 		D903C6F41D3F73280087BC07 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
@@ -185,8 +194,6 @@
 		D94DE30C1CC510D00087BC07 /* NetLogFile+CoreDataProperties.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NetLogFile+CoreDataProperties.m"; sourceTree = "<group>"; };
 		D94DE30D1CC510D00087BC07 /* NetLogFile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NetLogFile.h; sourceTree = "<group>"; };
 		D94DE30E1CC510D00087BC07 /* NetLogFile.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NetLogFile.m; sourceTree = "<group>"; };
-		D952CAB41CD371BF0087BC07 /* Commander+CoreDataProperties.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "Commander+CoreDataProperties.h"; sourceTree = "<group>"; };
-		D952CAB51CD371BF0087BC07 /* Commander+CoreDataProperties.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "Commander+CoreDataProperties.m"; sourceTree = "<group>"; };
 		D952CAB61CD371BF0087BC07 /* Commander.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Commander.h; sourceTree = "<group>"; };
 		D952CAB71CD371BF0087BC07 /* Commander.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Commander.m; sourceTree = "<group>"; };
 		D95E150B1CC42DE40087BC07 /* HttpApiManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HttpApiManager.h; sourceTree = "<group>"; };
@@ -295,8 +302,8 @@
 			isa = PBXGroup;
 			children = (
 				D94DE2911CC4EA0E0087BC07 /* EDDiscovery.xcdatamodeld */,
-				D952CAB41CD371BF0087BC07 /* Commander+CoreDataProperties.h */,
-				D952CAB51CD371BF0087BC07 /* Commander+CoreDataProperties.m */,
+				1CF7317821B9DFBC001DC458 /* Commander+CoreDataProperties.h */,
+				1CF7317921B9DFBC001DC458 /* Commander+CoreDataProperties.m */,
 				D952CAB61CD371BF0087BC07 /* Commander.h */,
 				D952CAB71CD371BF0087BC07 /* Commander.m */,
 				D94DE2CD1CC5024D0087BC07 /* DBVersion+CoreDataProperties.h */,
@@ -420,6 +427,8 @@
 				D95E150C1CC42DE40087BC07 /* HttpApiManager.m */,
 				D92E57201CE493E00087BC07 /* NSURLConnection+Progress.h */,
 				D92E57211CE493E00087BC07 /* NSURLConnection+Progress.m */,
+				1C74381621B92EEA00E91931 /* URLConnection.h */,
+				1C74381421B92EB200E91931 /* URLConnection.m */,
 			);
 			name = Networking;
 			sourceTree = "<group>";
@@ -540,6 +549,8 @@
 		D9BAB5CF1CC0F7D80087BC07 = {
 			isa = PBXGroup;
 			children = (
+				1CF7318221BA7074001DC458 /* Commander+CoreDataProperties.h */,
+				1CF7318321BA7074001DC458 /* Commander+CoreDataProperties.m */,
 				1C6ADA501D3523BC004B04A4 /* Metal.framework */,
 				1C6ADA511D3523BC004B04A4 /* MetalKit.framework */,
 				D903C6F41D3F73280087BC07 /* QuartzCore.framework */,
@@ -708,6 +719,7 @@
 				D95E15131CC42E620087BC07 /* EDSMConnection.m in Sources */,
 				1C3FA1621D33D23B00252B74 /* ThreeDMapRenderer.mm in Sources */,
 				D9CCCFA51CDBEB160087BC07 /* DistanceNumberFormatter.m in Sources */,
+				1C74381521B92EB200E91931 /* URLConnection.m in Sources */,
 				D91CAA731CD416F10087BC07 /* Note+CoreDataProperties.m in Sources */,
 				D94DE2DF1CC5024D0087BC07 /* DBVersion+CoreDataProperties.m in Sources */,
 				D917A8E81CC672E20087BC07 /* EDSM+CoreDataProperties.m in Sources */,
@@ -719,10 +731,10 @@
 				D960B6791CDFD5A80087BC07 /* LoadingViewController.m in Sources */,
 				D92ED4661CD81C820087BC07 /* SystemData.m in Sources */,
 				D91CAA741CD416F10087BC07 /* Note.m in Sources */,
+				1CF7318421BA7074001DC458 /* Commander+CoreDataProperties.m in Sources */,
 				D94DE2FF1CC5028B0087BC07 /* System+CoreDataProperties.m in Sources */,
 				D9841CE61D08C3670087BC07 /* BlackTileOverlay.m in Sources */,
 				D9AE9B3E1D103D090087BC07 /* ScreenshotMonitor.m in Sources */,
-				D952CAB81CD371BF0087BC07 /* Commander+CoreDataProperties.m in Sources */,
 				D92ED45D1CD811F00087BC07 /* SuggestedReferences.m in Sources */,
 				D92ED4601CD812D20087BC07 /* ReferencesSector.m in Sources */,
 				D920C9E71CCFA42D0087BC07 /* Distance+CoreDataProperties.m in Sources */,
@@ -730,6 +742,7 @@
 				D94DE3001CC5028B0087BC07 /* System.m in Sources */,
 				1C4344811D36A17000940E8D /* shaders.metal in Sources */,
 				D94DE2FC1CC5028B0087BC07 /* Image.m in Sources */,
+				1CF7317F21B9DFBC001DC458 /* Commander+CoreDataProperties.m in Sources */,
 				1CA9FD4F1D32DE8C00A93F60 /* ThreeDMapViewController.m in Sources */,
 				D9CC87281CF8A49C0087BC07 /* NSManagedObjectModel+KCOrderedAccessorFix.m in Sources */,
 				D93F0F491D086DC10087BC07 /* CartographicOverlay.m in Sources */,
@@ -801,7 +814,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
@@ -850,7 +863,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = macosx;
 				VALID_ARCHS = x86_64;
@@ -873,7 +886,7 @@
 				GCC_PREFIX_HEADER = EDDiscovery/PrefixHeader.pch;
 				INFOPLIST_FILE = EDDiscovery/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.travellingkiwi.EDDiscovery-beta";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
@@ -896,7 +909,7 @@
 				GCC_PREFIX_HEADER = EDDiscovery/PrefixHeader.pch;
 				INFOPLIST_FILE = EDDiscovery/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.travellingkiwi.EDDiscovery-beta";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
@@ -930,6 +943,7 @@
 		D94DE2911CC4EA0E0087BC07 /* EDDiscovery.xcdatamodeld */ = {
 			isa = XCVersionGroup;
 			children = (
+				1CF7317521B9DF50001DC458 /* EDDiscovery 3.xcdatamodel */,
 				D9AE9B3A1D1039EB0087BC07 /* EDDiscovery 2.xcdatamodel */,
 				D94DE2921CC4EA0E0087BC07 /* EDDiscovery.xcdatamodel */,
 			);
